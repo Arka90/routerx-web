@@ -5,6 +5,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/',
   plugins: [
     TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
     react()
@@ -14,4 +15,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    outDir: "dist"
+  }
+
 })
