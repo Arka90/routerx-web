@@ -24,6 +24,19 @@ export interface MaintenancePayload {
   reason: string;
 }
 
+export interface Maintenance {
+  id: number;
+  monitor_id: number;
+  starts_at: string;
+  ends_at: string;
+  reason: string;
+  created_at: string;
+}
+
+export interface MaintenanceResponse {
+  maintenance: Maintenance | null;
+}
+
 export interface Incident {
   id: number;
   monitor_id: number;

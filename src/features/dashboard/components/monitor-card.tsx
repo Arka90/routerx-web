@@ -65,9 +65,12 @@ export function MonitorCard({ monitor }: { monitor: Monitor }) {
             
             <div className="flex flex-col items-end gap-1">
                 {monitor.tls_expiry_at && (
-                  <span className="flex items-center gap-1 text-[11px] text-neutral-500 bg-neutral-50 dark:bg-neutral-900/50 px-1.5 py-0.5 rounded border border-neutral-200 dark:border-neutral-800">
+                  <span 
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500 bg-neutral-50 dark:bg-neutral-900/50 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-800"
+                    title="TLS Certificate Expiration Date"
+                  >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                      {new Date(monitor.tls_expiry_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      <span>TLS Exp: {new Date(monitor.tls_expiry_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </span>
                 )}
             </div>

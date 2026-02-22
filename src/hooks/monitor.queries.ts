@@ -54,6 +54,28 @@ export const useSetMaintenance = () => {
     mutationFn: async ({ id, payload }: { id: number, payload: MaintenancePayload }) => await monitorApi.setMaintenance(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['monitors'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+    },
+  });
+};
+
+// Get maintenance for a monitor
+export const useGetMaintenance = (monitorId: number) => {
+  return useQuery({
+    queryKey: ['maintenance', monitorId],
+    queryFn: async () => await monitorApi.getMaintenance(monitorId),
+    enabled: !!monitorId,
+  });
+};
+
+// Delete maintenance for a monitor
+export const useDeleteMaintenance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => await monitorApi.deleteMaintenance(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['monitors'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
     },
   });
 };

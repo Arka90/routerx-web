@@ -3,7 +3,8 @@ import { queryURL } from '@/services/queryURL';
 import type { 
   Monitor, 
   CreateMonitorPayload, 
-  MaintenancePayload, 
+  MaintenancePayload,
+  MaintenanceResponse,
   IncidentResponse, 
   UptimeResponse,
   Probe
@@ -32,6 +33,16 @@ export const monitorApi = {
 
   setMaintenance: async (id: number, payload: MaintenancePayload): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(queryURL.maintenance(id), payload);
+    return response.data;
+  },
+
+  getMaintenance: async (id: number): Promise<MaintenanceResponse> => {
+    const response = await api.get<MaintenanceResponse>(queryURL.maintenance(id));
+    return response.data;
+  },
+
+  deleteMaintenance: async (id: number): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(queryURL.maintenance(id));
     return response.data;
   },
 

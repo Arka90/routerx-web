@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useIncidents, useUptime, useSetMaintenance, useDeleteMonitor, useUpdateMonitor, useMonitors, useProbes } from '@/hooks/monitor.queries';
+import { useIncidents, useUptime, useSetMaintenance, useDeleteMonitor, useUpdateMonitor, useMonitors, useProbes, useGetMaintenance, useDeleteMaintenance } from '@/hooks/monitor.queries';
 import { toast } from 'sonner';
 import { ProbeGraph } from '@/components/ProbeGraph';
 import { PremiumField } from "@/components/ui/premium-field";
@@ -37,10 +37,12 @@ function MonitorPage() {
   const { data: uptimeData, isLoading: isUptimeLoading } = useUptime(numericId);
   const { data: incidentsData, isLoading: isIncidentsLoading } = useIncidents(numericId);
   const { data: probesData, isLoading: isProbesLoading } = useProbes(numericId);
+  const { data: maintenanceData, isLoading: isMaintenanceLoading } = useGetMaintenance(numericId);
   
   const setMaintenanceMutation = useSetMaintenance();
   const deleteMonitorMutation = useDeleteMonitor();
   const updateMonitorMutation = useUpdateMonitor();
+  const deleteMaintenanceMutation = useDeleteMaintenance();
 
   // Reset form states when modal opens with new monitor
   useEffect(() => {
@@ -163,7 +165,7 @@ function MonitorPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-6 gap-4">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors uppercase tracking-widest">
+                        <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors uppercase tracking-widest">
                             <ChevronLeftIcon /> Dashboard
                         </Link>
                         <span className="text-neutral-300 dark:text-neutral-700">/</span>
@@ -305,47 +307,84 @@ function MonitorPage() {
                                 Freeze automated checks and pause alerts during deployment windows to avoid false outages.
                             </p>
                         </div>
-                    
-                        <form onSubmit={handleSetMaintenance} className="grid grid-cols-1 gap-8">
-                            <PremiumField
-                                id="reason"
-                                label="Maintenance Reason"
-                                helperText="Clearly state the purpose of this maintenance for history logs."
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                                placeholder="e.g. Database migration v2"
-                                icon={<ClockIcon />}
-                            />
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <PremiumField
-                                    id="starts_at"
-                                    type="datetime-local"
-                                    label="Starts At"
-                                    value={startsAt}
-                                    onChange={(e) => setStartsAt(e.target.value)}
-                                    helperText="When should we pause monitoring?"
-                                    onClick={(e) => e.currentTarget.showPicker?.()}
-                                />
-                                <PremiumField
-                                    id="ends_at"
-                                    type="datetime-local"
-                                    label="Ends At"
-                                    value={endsAt}
-                                    onChange={(e) => setEndsAt(e.target.value)}
-                                    helperText="Monitoring will resume automatically."
-                                    onClick={(e) => e.currentTarget.showPicker?.()}
-                                />
+                        
+                        {isMaintenanceLoading ? (
+                            <div className="w-full h-32 animate-pulse bg-neutral-100 dark:bg-neutral-900 rounded-xl"></div>
+                        ) : monitor.in_maintenance && maintenanceData?.maintenance ? (
+                            <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h4 className="font-semibold text-amber-900 dark:text-amber-500 mb-1">Active Maintenance Window</h4>
+                                        <p className="text-sm text-amber-700 dark:text-amber-600 font-medium">{maintenanceData.maintenance.reason}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Are you sure you want to cancel this maintenance window?')) {
+                                                deleteMaintenanceMutation.mutate(monitor.id, {
+                                                    onSuccess: () => toast.success('Maintenance window cancelled'),
+                                                    onError: () => toast.error('Failed to cancel maintenance')
+                                                });
+                                            }
+                                        }}
+                                        disabled={deleteMaintenanceMutation.isPending}
+                                        className="px-4 py-2 bg-white dark:bg-[#111] border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-500 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                                    >
+                                        {deleteMaintenanceMutation.isPending ? 'Cancelling...' : 'Cancel Window'}
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm mt-6">
+                                    <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                                        <p className="text-amber-600/70 dark:text-amber-500/70 text-xs uppercase tracking-wider font-semibold mb-1">Starts At</p>
+                                        <p className="text-amber-900 dark:text-amber-400 font-medium">{new Date(maintenanceData.maintenance.starts_at).toLocaleString()}</p>
+                                    </div>
+                                    <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                                        <p className="text-amber-600/70 dark:text-amber-500/70 text-xs uppercase tracking-wider font-semibold mb-1">Ends At</p>
+                                        <p className="text-amber-900 dark:text-amber-400 font-medium">{new Date(maintenanceData.maintenance.ends_at).toLocaleString()}</p>
+                                    </div>
+                                </div>
                             </div>
+                        ) : (
+                            <form onSubmit={handleSetMaintenance} className="grid grid-cols-1 gap-8">
+                                <PremiumField
+                                    id="reason"
+                                    label="Maintenance Reason"
+                                    helperText="Clearly state the purpose of this maintenance for history logs."
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                    placeholder="e.g. Database migration v2"
+                                    icon={<ClockIcon />}
+                                />
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <PremiumField
+                                        id="starts_at"
+                                        type="datetime-local"
+                                        label="Starts At"
+                                        value={startsAt}
+                                        onChange={(e) => setStartsAt(e.target.value)}
+                                        helperText="When should we pause monitoring?"
+                                        onClick={(e) => e.currentTarget.showPicker?.()}
+                                    />
+                                    <PremiumField
+                                        id="ends_at"
+                                        type="datetime-local"
+                                        label="Ends At"
+                                        value={endsAt}
+                                        onChange={(e) => setEndsAt(e.target.value)}
+                                        helperText="Monitoring will resume automatically."
+                                        onClick={(e) => e.currentTarget.showPicker?.()}
+                                    />
+                                </div>
 
-                            <button 
-                                type="submit" 
-                                className="w-full h-14 mt-4 rounded-xl bg-neutral-900 px-4 text-[13px] font-bold uppercase tracking-[0.2em] text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 transition-all shadow-lg hover:shadow-xl hover:translate-y-[-1px] active:translate-y-[0px]"
-                                disabled={setMaintenanceMutation.isPending}
-                            >
-                                {setMaintenanceMutation.isPending ? 'Scheduling...' : 'Confirm Window'}
-                            </button>
-                        </form>
+                                <button 
+                                    type="submit" 
+                                    className="w-full h-14 mt-4 rounded-xl bg-neutral-900 px-4 text-[13px] font-bold uppercase tracking-[0.2em] text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-50 transition-all shadow-lg hover:shadow-xl hover:translate-y-[-1px] active:translate-y-[0px]"
+                                    disabled={setMaintenanceMutation.isPending}
+                                >
+                                    {setMaintenanceMutation.isPending ? 'Scheduling...' : 'Confirm Window'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 )}
 
