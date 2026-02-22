@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
-import { Loader2, Command } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const emailSchema = z.object({
