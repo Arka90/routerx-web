@@ -1,0 +1,82 @@
+:root {
+  /* ================= LIGHT MODE ================= */
+  /* Backgrounds */
+  --bg-base: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F1F5F9;
+  --bg-hover: #E2E8F0;
+  --border-subtle: #E5E7EB;
+
+  /* Text */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+
+  /* Brand */
+  --accent-primary: #00B8E6;
+  --accent-soft: rgba(0, 184, 230, 0.12);
+
+  /* Status */
+  --status-up: #16A34A;
+  --status-degraded: #D97706;
+  --status-down: #DC2626;
+  --status-paused: #6B7280;
+  --status-unknown: #8B5CF6;
+
+  /* Charts */
+  --chart-latency: #00B8E6;
+  --chart-uptime: #16A34A;
+  --chart-error: #DC2626;
+  --chart-retry: #D97706;
+  --chart-grid: #CBD5E1;
+
+  /* Shadcn defaults */
+  --background: var(--bg-surface);
+  --foreground: var(--text-primary);
+  --popover: var(--bg-surface);
+  --popover-foreground: var(--text-primary);
+  --border: var(--border-subtle);
+  --radius: 0.75rem;
+}
+
+.dark {
+  /* ================= DARK MODE ================= */
+  /* Backgrounds */
+  --bg-base: #0B1220;
+  --bg-surface: #111827;
+  --bg-elevated: #172036;
+  --bg-hover: #1F2A44;
+  --border-subtle: #26314F;
+
+  /* Text */
+  --text-primary: #E5E7EB;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --text-disabled: #4B5563;
+
+  /* Brand */
+  --accent-primary: #00D1FF;
+  --accent-soft: rgba(0, 209, 255, 0.15);
+
+  /* Status */
+  --status-up: #22C55E;
+  --status-degraded: #F59E0B;
+  --status-down: #EF4444;
+  --status-paused: #6B7280;
+  --status-unknown: #A78BFA;
+
+  /* Charts */
+  --chart-latency: #00D1FF;
+  --chart-uptime: #22C55E;
+  --chart-error: #EF4444;
+  --chart-retry: #F59E0B;
+  --chart-grid: #24304D;
+
+  /* Shadcn defaults */
+  --background: var(--bg-surface);
+  --foreground: var(--text-primary);
+  --popover: var(--bg-surface);
+  --popover-foreground: var(--text-primary);
+  --border: var(--border-subtle);
+}

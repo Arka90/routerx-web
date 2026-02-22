@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+@import './styles/tokens.css';
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-hover: var(--bg-hover);
+
+  --color-border-subtle: var(--border-subtle);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-accent: var(--accent-primary);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-status-up: var(--status-up);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-down: var(--status-down);
+  --color-status-paused: var(--status-paused);
+  --color-status-unknown: var(--status-unknown);
+
+  --color-chart-latency: var(--chart-latency);
+  --color-chart-uptime: var(--chart-uptime);
+  --color-chart-error: var(--chart-error);
+  --color-chart-retry: var(--chart-retry);
+  --color-chart-grid: var(--chart-grid);
+
+  @keyframes shiny {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  --animate-shiny: shiny 2s infinite linear;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-base text-text-primary antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+}
