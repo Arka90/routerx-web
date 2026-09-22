@@ -37,7 +37,7 @@ export function LandingPage() {
     },
     {
       title: "Root Cause Classification",
-      description: "Beyond up/down: classify failures by DNS, TCP, TLS, or HTTP level diagnostics.",
+      description: "Beyond up/down: failures are named by layer — DNS, TCP, TLS, HTTP status, or a failed body assertion.",
       icon: <Search className="w-5 h-5" />,
     },
     {
@@ -47,7 +47,7 @@ export function LandingPage() {
     },
     {
       title: "Response Time Alerts",
-      description: "Performance monitoring that alerts you when your site is alive but dying slowly.",
+      description: "Set a latency threshold per monitor and get paged when a site is alive but dying slowly.",
       icon: <Zap className="w-5 h-5" />,
     },
     {
@@ -61,13 +61,13 @@ export function LandingPage() {
       icon: <FileText className="w-5 h-5" />,
     },
     {
-      title: "Queue Infrastructure",
-      description: "Horizontally scalable background workers with BullMQ for non-blocking checks at scale.",
+      title: "Alerts Where You Work",
+      description: "Slack, Discord, email, or a signed webhook. Per-monitor thresholds, reminders and muting.",
       icon: <BarChart3 className="w-5 h-5" />,
     },
     {
-      title: "Status Pages",
-      description: "Expose real-time monitor state and incident history to your customers automatically.",
+      title: "Team Workspaces",
+      description: "Invite teammates with owner, admin or read-only roles. Monitors and alert routing are shared.",
       icon: <Globe className="w-5 h-5" />,
     }
   ];

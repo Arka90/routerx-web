@@ -1,88 +1,89 @@
-import { useUptime } from '@/hooks/monitor.queries';
-import { formatUptimePercentage, uptimeWindowLabel } from '@/lib/format';
-import type { Monitor } from '@/types/monitor.types';
-import { Link } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router'
+import { Lock, PauseCircle } from 'lucide-react'
+import { useUptime } from '@/hooks/monitor.queries'
+import { formatUptimePercentage, uptimeWindowLabel } from '@/lib/format'
+import { presentStatus } from '@/lib/status'
+import type { Monitor } from '@/types/monitor.types'
 
 export function MonitorCard({ monitor }: { monitor: Monitor }) {
-  const isUp = monitor.confirmed_status === 'UP';
-  const isMaintenance = monitor.in_maintenance;
-  
-  const { data: uptimeData } = useUptime(monitor.id);
+  const { data: uptimeData } = useUptime(monitor.id)
+  const status = presentStatus(monitor)
+  const isDown = !monitor.paused && !monitor.in_maintenance && monitor.confirmed_status === 'DOWN'
 
   // A monitor stored before URL validation existed can still be unparseable,
   // and an exception here would unmount the entire grid, not just this card.
-  let hostname = monitor.url;
+  let hostname = monitor.url
   try {
-    hostname = new URL(monitor.url).hostname;
+    hostname = new URL(monitor.url).hostname
   } catch {
-    hostname = monitor.url;
+    hostname = monitor.url
   }
-
-  let statusDotElement = <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600 animate-pulse"></span>;
-  let statusText = 'Unconfirmed';
-  let statusTextColor = 'text-neutral-500';
-
-  if (isMaintenance) {
-    statusText = 'Maintenance';
-    statusDotElement = <span className="w-2 h-2 rounded-full bg-amber-500"></span>;
-    statusTextColor = 'text-amber-600 dark:text-amber-500';
-  } else if (isUp) {
-    statusText = 'Operational';
-    statusDotElement = <span className="w-2 h-2 rounded-full bg-emerald-500"></span>;
-    statusTextColor = 'text-emerald-700 dark:text-emerald-500';
-  } else if (monitor.confirmed_status === 'DOWN') {
-    statusText = 'Outage';
-    statusDotElement = <span className="absolute -left-[1px] top-0 bottom-0 w-[2px] bg-red-500 rounded-l-md"></span>;
-    statusTextColor = 'text-red-600 dark:text-red-500';
-  }
-
-  const formattedUptime = formatUptimePercentage(uptimeData);
 
   return (
-    <Link 
+    <Link
       to="/monitor/$monitorId"
       params={{ monitorId: monitor.id.toString() }}
-      className="group relative flex flex-col justify-between bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-neutral-800 rounded-xl p-5 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-sm transition-all cursor-pointer overflow-hidden min-h-[160px]"
+      className="group relative flex min-h-[160px] cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-[#0A0A0A] dark:hover:border-neutral-700"
     >
-      {/* Absolute outage indicator stripe (Vercel-style error state) */}
-      {monitor.confirmed_status === 'DOWN' && !isMaintenance && statusDotElement}
+      {isDown && (
+        <span className="absolute -left-[1px] bottom-0 top-0 w-[2px] rounded-l-md bg-red-500" />
+      )}
 
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex flex-col gap-1 max-w-[80%]">
-          <h3 className="text-[14px] font-medium text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-2">
-            {monitor.confirmed_status !== 'DOWN' && statusDotElement}
-            {hostname}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h3 className="flex items-center gap-2 truncate text-[14px] font-medium text-neutral-900 dark:text-neutral-100">
+            {!isDown && <span className={`h-2 w-2 shrink-0 rounded-full ${status.dot}`} />}
+            <span className="truncate">{monitor.name ?? hostname}</span>
           </h3>
-          <p className="text-[13px] text-neutral-500 truncate">{monitor.url}</p>
+          <p className="truncate text-[13px] text-neutral-500">
+            <span className="mr-1.5 font-mono text-[11px] uppercase text-neutral-400">
+              {monitor.method}
+            </span>
+            {monitor.url}
+          </p>
         </div>
-        
-        <span className={`text-[12px] font-medium px-2 py-0.5 rounded-md ${monitor.confirmed_status === 'DOWN' && !isMaintenance ? 'bg-red-50 dark:bg-red-500/10' : 'bg-neutral-100 dark:bg-neutral-900'} ${statusTextColor}`}>
-          {statusText}
+
+        <span
+          className={`shrink-0 rounded-md px-2 py-0.5 text-[12px] font-medium ${status.badge} ${status.text}`}
+        >
+          {status.label}
         </span>
       </div>
-      
-      <div className="mt-auto">
-        <div className="flex items-end justify-between mb-3">
-            <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-neutral-400 font-medium uppercase tracking-wider">{uptimeWindowLabel(uptimeData)}</span>
-                <span className="text-xl font-medium tracking-tight text-neutral-900 dark:text-neutral-100 leading-none">
-                    {formattedUptime !== '...' ? `${formattedUptime}%` : '...'}
-                </span>
-            </div>
-            
-            <div className="flex flex-col items-end gap-1">
-                {monitor.tls_expiry_at && (
-                  <span 
-                    className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500 bg-neutral-50 dark:bg-neutral-900/50 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-800"
-                    title="TLS Certificate Expiration Date"
-                  >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                      <span>TLS Exp: {new Date(monitor.tls_expiry_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  </span>
-                )}
-            </div>
+
+      <div className="mt-auto flex items-end justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+            {uptimeWindowLabel(uptimeData)}
+          </span>
+          <span className="text-xl font-medium leading-none tracking-tight text-neutral-900 dark:text-neutral-100">
+            {uptimeData ? `${formatUptimePercentage(uptimeData)}%` : '…'}
+          </span>
+        </div>
+
+        <div className="flex flex-col items-end gap-1.5">
+          {monitor.paused && (
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
+              <PauseCircle className="h-3 w-3" />
+              Checks paused
+            </span>
+          )}
+
+          {monitor.tls_expiry_at && (
+            <span
+              className="flex items-center gap-1.5 rounded border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900/50"
+              title="TLS certificate expiry"
+            >
+              <Lock className="h-3 w-3" />
+              TLS{' '}
+              {new Date(monitor.tls_expiry_at).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
+          )}
         </div>
       </div>
     </Link>
-  );
+  )
 }

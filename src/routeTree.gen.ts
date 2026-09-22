@@ -11,11 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InvitesTokenRouteImport } from './routes/invites/$token'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedStatusPagesRouteImport } from './routes/_authenticated/status-pages'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedIncidentsRouteImport } from './routes/_authenticated/incidents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
 import { Route as AuthenticatedMonitorMonitorIdRouteImport } from './routes/_authenticated/monitor/$monitorId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -27,10 +30,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitesTokenRoute = InvitesTokenRouteImport.update({
+  id: '/invites/$token',
+  path: '/invites/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedStatusPagesRoute =
   AuthenticatedStatusPagesRouteImport.update({
@@ -53,6 +66,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedChannelsRoute = AuthenticatedChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMonitorMonitorIdRoute =
   AuthenticatedMonitorMonitorIdRouteImport.update({
     id: '/monitor/$monitorId',
@@ -62,61 +80,79 @@ const AuthenticatedMonitorMonitorIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/channels': typeof AuthenticatedChannelsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/incidents': typeof AuthenticatedIncidentsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/status-pages': typeof AuthenticatedStatusPagesRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/auth/login': typeof AuthLoginRoute
+  '/invites/$token': typeof InvitesTokenRoute
   '/monitor/$monitorId': typeof AuthenticatedMonitorMonitorIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/channels': typeof AuthenticatedChannelsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/incidents': typeof AuthenticatedIncidentsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/status-pages': typeof AuthenticatedStatusPagesRoute
+  '/team': typeof AuthenticatedTeamRoute
   '/auth/login': typeof AuthLoginRoute
+  '/invites/$token': typeof InvitesTokenRoute
   '/monitor/$monitorId': typeof AuthenticatedMonitorMonitorIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/channels': typeof AuthenticatedChannelsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/incidents': typeof AuthenticatedIncidentsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/status-pages': typeof AuthenticatedStatusPagesRoute
+  '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/auth/login': typeof AuthLoginRoute
+  '/invites/$token': typeof InvitesTokenRoute
   '/_authenticated/monitor/$monitorId': typeof AuthenticatedMonitorMonitorIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/channels'
     | '/dashboard'
     | '/incidents'
     | '/settings'
     | '/status-pages'
+    | '/team'
     | '/auth/login'
+    | '/invites/$token'
     | '/monitor/$monitorId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/channels'
     | '/dashboard'
     | '/incidents'
     | '/settings'
     | '/status-pages'
+    | '/team'
     | '/auth/login'
+    | '/invites/$token'
     | '/monitor/$monitorId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/channels'
     | '/_authenticated/dashboard'
     | '/_authenticated/incidents'
     | '/_authenticated/settings'
     | '/_authenticated/status-pages'
+    | '/_authenticated/team'
     | '/auth/login'
+    | '/invites/$token'
     | '/_authenticated/monitor/$monitorId'
   fileRoutesById: FileRoutesById
 }
@@ -124,6 +160,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
+  InvitesTokenRoute: typeof InvitesTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -142,12 +179,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invites/$token': {
+      id: '/invites/$token'
+      path: '/invites/$token'
+      fullPath: '/invites/$token'
+      preLoaderRoute: typeof InvitesTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/team': {
+      id: '/_authenticated/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/status-pages': {
       id: '/_authenticated/status-pages'
@@ -177,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/channels': {
+      id: '/_authenticated/channels'
+      path: '/channels'
+      fullPath: '/channels'
+      preLoaderRoute: typeof AuthenticatedChannelsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/monitor/$monitorId': {
       id: '/_authenticated/monitor/$monitorId'
       path: '/monitor/$monitorId'
@@ -188,18 +246,22 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedChannelsRoute: typeof AuthenticatedChannelsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedIncidentsRoute: typeof AuthenticatedIncidentsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStatusPagesRoute: typeof AuthenticatedStatusPagesRoute
+  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedMonitorMonitorIdRoute: typeof AuthenticatedMonitorMonitorIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedChannelsRoute: AuthenticatedChannelsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedIncidentsRoute: AuthenticatedIncidentsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStatusPagesRoute: AuthenticatedStatusPagesRoute,
+  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedMonitorMonitorIdRoute: AuthenticatedMonitorMonitorIdRoute,
 }
 
@@ -211,6 +273,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
+  InvitesTokenRoute: InvitesTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

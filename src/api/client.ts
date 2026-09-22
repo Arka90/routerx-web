@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import Cookies from 'js-cookie';
+import { getActiveOrgId } from '@/stores/authStore';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://routerx-api.heyarka.cloud/';
 
@@ -16,6 +17,14 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Which workspace this request acts on. The server verifies membership
+    // regardless, so this selects rather than authorises.
+    const orgId = getActiveOrgId();
+    if (orgId !== null && config.headers) {
+      config.headers['X-Org-Id'] = String(orgId);
+    }
+
     return config;
   },
   (error: AxiosError) => {
@@ -29,13 +38,18 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access (e.g., redirect to login or clear token)
+      // The session was revoked or expired. Sessions are server-side now, so
+      // a 401 is authoritative rather than a guess about token age.
       Cookies.remove('session-token');
       Cookies.remove('user-email');
-      
-      // We don't want to redirect if we're already on a login page
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/auth')) {
-          window.location.href = '/auth/login';
+      Cookies.remove('active-org');
+
+      const path = typeof window !== 'undefined' ? window.location.pathname : '';
+
+      // An invite link is viewable signed out; bouncing off it would lose
+      // the token the page needs.
+      if (path && !path.startsWith('/auth') && !path.startsWith('/invites')) {
+        window.location.href = '/auth/login';
       }
     }
     return Promise.reject(error);

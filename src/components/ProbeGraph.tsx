@@ -18,17 +18,17 @@ interface ProbeGraphProps {
 
 export function ProbeGraph({ data }: ProbeGraphProps) {
   const chartData = useMemo(() => {
-    return data.map((d) => {
-      // If the timestamp doesn't contain 'Z' or a timezone offset, append 'Z' to treat it as UTC
-      const dateStr = d.timestamp.includes('T') || d.timestamp.endsWith('Z') 
-        ? d.timestamp 
-        : `${d.timestamp.replace(' ', 'T')}Z`;
-      
-      return {
-        ...d,
-        formattedTime: format(new Date(dateStr), 'HH:mm:ss'),
-      };
-    }).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    // Postgres returns timestamptz, which serialises to a proper ISO string.
+    // The old SQLite schema stored a zone-less "YYYY-MM-DD HH:MM:SS" that had
+    // to be patched into UTC here before it could be parsed.
+    return data
+      .map((point) => ({
+        ...point,
+        formattedTime: format(new Date(point.timestamp), 'HH:mm:ss'),
+      }))
+      .sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
   }, [data]);
 
   if (!data || data.length === 0) {
@@ -43,7 +43,7 @@ export function ProbeGraph({ data }: ProbeGraphProps) {
     <div className="w-full h-[500px] bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-neutral-800 p-6 rounded-none animate-in fade-in zoom-in duration-500">
       <div className="mb-6">
         <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Response Timing (ms)</h3>
-        <p className="text-xs text-neutral-400 dark:text-neutral-500">Real-time feedback from global probes</p>
+        <p className="text-xs text-neutral-400 dark:text-neutral-500">Per-layer breakdown of each check</p>
       </div>
       
       <ResponsiveContainer width="100%" height="85%">
