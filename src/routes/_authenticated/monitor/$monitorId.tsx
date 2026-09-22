@@ -20,6 +20,8 @@ import { PremiumField } from '@/components/ui/premium-field'
 import { MonitorForm, type MonitorFormValues } from '@/features/dashboard/components/monitor-form'
 import { AlertPolicyPanel } from '@/features/monitor/components/alert-policy-panel'
 import { IncidentList } from '@/features/monitor/components/incident-list'
+import { RegionStatus } from '@/features/monitor/components/region-status'
+import { useRegions } from '@/hooks/status.queries'
 import { formatDuration, formatUptimePercentage, uptimeWindowLabel } from '@/lib/format'
 import { presentStatus } from '@/lib/status'
 import { cn } from '@/lib/utils'
@@ -56,6 +58,7 @@ function MonitorPage() {
   const { data: probesData, isLoading: isProbesLoading } = useProbes(numericId)
   const { data: maintenanceData, isLoading: isMaintenanceLoading } =
     useGetMaintenance(numericId)
+  const { data: regionData } = useRegions()
 
   const setMaintenance = useSetMaintenance()
   const deleteMaintenance = useDeleteMaintenance()
@@ -250,6 +253,12 @@ function MonitorPage() {
               ) : (
                 <ProbeGraph data={probesData ?? []} />
               )}
+
+              <RegionStatus
+                states={monitor.region_states ?? []}
+                regions={regionData?.regions ?? []}
+                confirmations={monitor.policy.confirmations}
+              />
             </section>
           )}
 

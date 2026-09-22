@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { Link } from '@tanstack/react-router'
 import { useDeliveries, useUpdatePolicy } from '@/hooks/monitor.queries'
 import { useChannels } from '@/hooks/org.queries'
+import { useRegions } from '@/hooks/status.queries'
 import { getApiErrorMessage } from '@/api/errors'
 import { useCanManage } from '@/stores/authStore'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,7 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
   const canManage = useCanManage()
   const updatePolicy = useUpdatePolicy()
   const { data: channelData } = useChannels()
+  const { data: regionData } = useRegions()
   const { data: deliveryData } = useDeliveries(monitor.id)
 
   const [failureThreshold, setFailureThreshold] = useState(
@@ -42,6 +44,14 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
   )
   const [muteHours, setMuteHours] = useState('0')
   const [selectedChannels, setSelectedChannels] = useState<number[]>(monitor.channel_ids)
+  const [confirmations, setConfirmations] = useState(String(monitor.policy.confirmations))
+
+  // How many vantage points this monitor is actually checked from — an empty
+  // list on the monitor means every enabled region.
+  const regionCount =
+    monitor.regions.length > 0
+      ? monitor.regions.length
+      : (regionData?.regions.length ?? 1)
 
   const channels = channelData?.channels ?? []
   const mutedUntil = monitor.policy.muted_until ? new Date(monitor.policy.muted_until) : null
@@ -61,6 +71,7 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
           alert_on_slow: alertOnSlow,
           slow_threshold_ms: Number(slowThreshold),
           renotify_minutes: renotify.trim() === '' ? null : Number(renotify),
+          confirmations: Number(confirmations),
           muted_until:
             hours > 0 ? new Date(Date.now() + hours * 3600 * 1000).toISOString() : null,
           channel_ids: selectedChannels,
@@ -158,6 +169,33 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
             </div>
           )}
         </div>
+
+        {regionCount > 1 && (
+          <div className="space-y-2">
+            <label htmlFor="confirmations" className={labelClass}>
+              Regions that must agree
+            </label>
+            <select
+              id="confirmations"
+              value={confirmations}
+              onChange={(event) => setConfirmations(event.target.value)}
+              disabled={!canManage}
+              className={selectClass}
+            >
+              {Array.from({ length: regionCount }).map((_, index) => (
+                <option key={index + 1} value={index + 1}>
+                  {index + 1} of {regionCount}
+                </option>
+              ))}
+            </select>
+            <p className={hintClass}>
+              One vantage point can't tell a site being down from the path to it being
+              down. Requiring two means a routing problem doesn't page anyone — the
+              failing region is still shown on the monitor. Recovery always needs every
+              region to be healthy.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label htmlFor="renotify" className={labelClass}>

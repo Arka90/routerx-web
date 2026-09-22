@@ -1,3 +1,5 @@
+import type { MonitorRegionState } from './status.types';
+
 export type MonitorStatus =
   | 'UP'
   | 'DOWN'
@@ -24,6 +26,8 @@ export interface Monitor {
   timeout_ms: number;
   follow_redirects: boolean;
   interval_seconds: number;
+  /** Empty means every enabled region. */
+  regions: string[];
   paused: boolean;
   confirmed_status: MonitorStatus;
   consecutive_failures: number;
@@ -43,11 +47,14 @@ export interface AlertPolicy {
   slow_threshold_ms: number;
   renotify_minutes: number | null;
   muted_until: string | null;
+  /** Regions that must independently agree before an incident opens. */
+  confirmations: number;
 }
 
 export interface MonitorDetail extends Monitor {
   policy: AlertPolicy;
   channel_ids: number[];
+  region_states: MonitorRegionState[];
 }
 
 export interface CreateMonitorPayload {
@@ -62,6 +69,7 @@ export interface CreateMonitorPayload {
   timeout_ms?: number;
   follow_redirects?: boolean;
   interval_seconds?: number;
+  regions?: string[];
   paused?: boolean;
 }
 
@@ -72,6 +80,7 @@ export interface AlertPolicyPayload {
   slow_threshold_ms?: number;
   renotify_minutes?: number | null;
   muted_until?: string | null;
+  confirmations?: number;
   channel_ids?: number[];
 }
 
@@ -102,6 +111,8 @@ export interface Incident {
   duration_seconds: number | null;
   root_cause: string | null;
   failure_detail: string | null;
+  /** Which vantage points saw the failure. */
+  affected_regions: string[];
   acknowledged_at: string | null;
   acknowledged_by: number | null;
   created_at: string;

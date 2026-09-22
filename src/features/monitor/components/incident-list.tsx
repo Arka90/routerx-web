@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, MessageSquare } from 'lucide-react'
 import { useAcknowledgeIncident } from '@/hooks/monitor.queries'
 import { getApiErrorMessage } from '@/api/errors'
 import { formatDuration } from '@/lib/format'
 import { humanizeRootCause } from '@/lib/status'
+import { IncidentUpdates } from './incident-updates'
 import type { Incident, OrgIncident } from '@/types/monitor.types'
 
 interface IncidentListProps {
@@ -26,6 +28,10 @@ export function IncidentList({
   emptyHint = 'No downtime has been recorded yet.',
 }: IncidentListProps) {
   const acknowledge = useAcknowledgeIncident()
+
+  // Updates are fetched per incident, so they load only when opened rather
+  // than firing a request for every incident on the page.
+  const [openUpdates, setOpenUpdates] = useState<number | null>(null)
 
   if (incidents.length === 0) {
     return (
@@ -97,6 +103,19 @@ export function IncidentList({
                     Acknowledged
                   </span>
                 )}
+
+                <button
+                  onClick={() =>
+                    setOpenUpdates((current) =>
+                      current === incident.id ? null : incident.id
+                    )
+                  }
+                  aria-expanded={openUpdates === incident.id}
+                  className="flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1 text-[12px] font-medium transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Updates
+                </button>
               </div>
             </div>
 
@@ -121,6 +140,17 @@ export function IncidentList({
                 </div>
               )}
 
+              {incident.affected_regions?.length > 1 && (
+                <div className="col-span-1 border-l-2 border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-[#111] md:col-span-2">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-neutral-500">
+                    Seen from
+                  </p>
+                  <p className="text-neutral-900 dark:text-neutral-300">
+                    {incident.affected_regions.join(', ')}
+                  </p>
+                </div>
+              )}
+
               {(incident.root_cause || incident.failure_detail) && (
                 <div className="col-span-1 border-l-2 border-red-500/50 bg-red-50 p-4 dark:bg-red-900/10 md:col-span-2">
                   <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-red-800/60 dark:text-red-400/60">
@@ -134,6 +164,8 @@ export function IncidentList({
                 </div>
               )}
             </div>
+
+            {openUpdates === incident.id && <IncidentUpdates incidentId={incident.id} />}
           </div>
         )
       })}

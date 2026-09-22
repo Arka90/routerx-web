@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, Plus, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { useRegions } from '@/hooks/status.queries'
 import { cn } from '@/lib/utils'
 import type {
   AssertionType,
@@ -95,6 +96,10 @@ export function MonitorForm({
   const [headers, setHeaders] = useState<HeaderRow[]>(toRows(initial?.request_headers))
   const [body, setBody] = useState(initial?.request_body ?? '')
   const [paused, setPaused] = useState(initial?.paused ?? false)
+  const [regions, setRegions] = useState<string[]>(initial?.regions ?? [])
+
+  const { data: regionData } = useRegions()
+  const availableRegions = regionData?.regions ?? []
 
   // Everything most people never touch stays behind a disclosure, so adding a
   // monitor is still a URL and an interval.
@@ -136,6 +141,7 @@ export function MonitorForm({
       assertion_value: assertionType === 'none' ? null : assertionValue.trim() || null,
       request_headers: headerObject,
       request_body: methodTakesBody && body.trim() ? body : null,
+      regions,
       paused,
     })
   }
@@ -341,6 +347,46 @@ export function MonitorForm({
                 placeholder='{"ping": true}'
                 className="w-full rounded-md border border-neutral-200 bg-white p-3 font-mono text-[13px] shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100 dark:focus-visible:ring-white"
               />
+            </div>
+          )}
+
+          {availableRegions.length > 1 && (
+            <div className="space-y-2">
+              <span className={labelClass}>Check from</span>
+
+              <div className="flex flex-wrap gap-2">
+                {availableRegions.map((region) => {
+                  const selected = regions.includes(region.code)
+
+                  return (
+                    <button
+                      key={region.code}
+                      type="button"
+                      onClick={() =>
+                        setRegions(
+                          selected
+                            ? regions.filter((code) => code !== region.code)
+                            : [...regions, region.code]
+                        )
+                      }
+                      className={cn(
+                        'rounded-md border px-3 py-1.5 text-[12px] font-medium transition-colors',
+                        selected
+                          ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-black'
+                          : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-900'
+                      )}
+                    >
+                      {region.name}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <p className={hintClass}>
+                {regions.length === 0
+                  ? 'Every region, including any added later.'
+                  : `${regions.length} of ${availableRegions.length} regions. Set how many must agree before alerting in the Alerts tab.`}
+              </p>
             </div>
           )}
 
