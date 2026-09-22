@@ -51,8 +51,8 @@ export const monitorApi = {
     return response.data;
   },
 
-  getUptime: async (monitorId: number): Promise<UptimeResponse> => {
-    const response = await api.get<UptimeResponse>(queryURL.uptime(monitorId));
+  getUptime: async (monitorId: number, hours: number): Promise<UptimeResponse> => {
+    const response = await api.get<UptimeResponse>(queryURL.uptime(monitorId, hours));
     return response.data;
   },
 

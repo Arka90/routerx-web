@@ -23,8 +23,18 @@ const emailSchema = z.object({
   email: z.email({ message: "Please enter a valid email address." }),
 });
 
+/**
+ * Must match the server's OTP length. The API issues six digits now — four
+ * left only 9,000 possible codes, which is a guessable number.
+ */
+const OTP_LENGTH = 6;
+
 const otpSchema = z.object({
-  otp: z.string().min(4, { message: "OTP must be 4 characters." }),
+  otp: z
+    .string()
+    .regex(new RegExp(`^\\d{${OTP_LENGTH}}$`), {
+      message: `Enter the ${OTP_LENGTH}-digit code from your email.`,
+    }),
 });
 
 export function LoginForm() {
@@ -47,12 +57,25 @@ export function LoginForm() {
   });
   const currentOtp = otpForm.watch("otp") || "";
 
-  const otpRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
+  // One ref list rather than a fixed set of useRef calls, so the number of
+  // boxes follows OTP_LENGTH.
+  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  const setOtpValue = (value: string) => {
+    otpForm.setValue("otp", value, { shouldValidate: false });
+  };
+
+  /** Let people paste the whole code instead of retyping six digits. */
+  const handleOtpPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = event.clipboardData.getData("text").replace(/\D/g, "");
+    if (!pasted) return;
+
+    event.preventDefault();
+
+    const next = pasted.slice(0, OTP_LENGTH);
+    setOtpValue(next);
+    otpRefs.current[Math.min(next.length, OTP_LENGTH - 1)]?.focus();
+  };
 
   const onEmailSubmit = (data: z.infer<typeof emailSchema>) => {
     requestOtpMutation.mutate(data, {
@@ -67,21 +90,19 @@ export function LoginForm() {
       window.alert("No email found. Please go back and enter your email.");
       return;
     }
-    if (!currentOtp || currentOtp.length < 4) {
-      window.alert("Please enter your OTP code.");
+    if (currentOtp.length < OTP_LENGTH) {
+      toast.error(`Enter all ${OTP_LENGTH} digits of your code.`);
       return;
     }
     verifyOtpMutation.mutate(
       { email: storedEmail, otp: currentOtp },
       {
         onSuccess: () => {
-          toast.success("OTP verification successful!");
+          toast.success("Signed in.");
           navigate({ to: "/dashboard", replace: true });
         },
-        onError: (error) => {
-          toast.error("OTP verification failed.");
-          console.error("OTP verification error:", error);
-        },
+        // The hook already surfaces the server's message (wrong code, expired,
+        // rate limited), so there is nothing to add here.
       },
     );
   };
@@ -136,7 +157,7 @@ export function LoginForm() {
             >
               {requestOtpMutation.isPending ? (
                 <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Sending link...
+                  <Loader2 className="w-4 h-4 animate-spin" /> Sending code...
                 </span>
               ) : (
                 "Continue with Email"
@@ -157,34 +178,39 @@ export function LoginForm() {
                 <FormItem className="flex flex-col items-center justify-center space-y-4">
                   <FormControl>
                     {/* PinInput style for OTP with spacing and auto-focus */}
-                    <div className="flex h-10 gap-3 justify-between">
-                      {[0, 1, 2, 3].map((i) => (
+                    <div className="flex h-10 gap-2 sm:gap-3 justify-center">
+                      {Array.from({ length: OTP_LENGTH }).map((_, i) => (
                         <Input
                           key={i}
                           type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          aria-label={`Digit ${i + 1} of ${OTP_LENGTH}`}
                           maxLength={1}
                           value={currentOtp[i] || ""}
-                          ref={otpRefs[i]}
+                          ref={(element) => {
+                            otpRefs.current[i] = element;
+                          }}
+                          onPaste={handleOtpPaste}
                           onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, "");
-                            const otpArr = currentOtp.split("");
+                            const otpArr = Array.from(
+                              { length: OTP_LENGTH },
+                              (_, idx) => currentOtp[idx] ?? "",
+                            );
                             otpArr[i] = val;
-                            otpForm.setValue("otp", otpArr.join(""));
-                            // Move to next field if input
-                            if (val && i < 3) {
-                              otpRefs[i + 1].current?.focus();
+                            setOtpValue(otpArr.join(""));
+
+                            if (val && i < OTP_LENGTH - 1) {
+                              otpRefs.current[i + 1]?.focus();
                             }
                           }}
                           onKeyDown={(e) => {
-                            if (
-                              e.key === "Backspace" &&
-                              !currentOtp[i] &&
-                              i > 0
-                            ) {
-                              otpRefs[i - 1].current?.focus();
+                            if (e.key === "Backspace" && !currentOtp[i] && i > 0) {
+                              otpRefs.current[i - 1]?.focus();
                             }
                           }}
-                          className={`h-12 w-12 sm:h-14 sm:w-14 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111] text-lg font-medium text-neutral-900 dark:text-neutral-100 ring-0 transition-all shadow-sm text-center ${otpForm.getFieldState("otp").invalid ? "border-red-500" : ""}`}
+                          className={`h-12 w-10 sm:h-14 sm:w-12 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111] text-lg font-medium text-neutral-900 dark:text-neutral-100 ring-0 transition-all shadow-sm text-center ${otpForm.getFieldState("otp").invalid ? "border-red-500" : ""}`}
                           autoFocus={i === 0}
                         />
                       ))}
@@ -198,7 +224,7 @@ export function LoginForm() {
               <Button
                 type="submit"
                 className="w-full h-10 rounded-md bg-black hover:bg-neutral-800 text-white dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-sm font-medium transition-colors shadow-sm"
-                disabled={verifyOtpMutation.isPending || currentOtp.length < 4}
+                disabled={verifyOtpMutation.isPending || currentOtp.length < OTP_LENGTH}
               >
                 {verifyOtpMutation.isPending ? (
                   <span className="flex items-center gap-2">

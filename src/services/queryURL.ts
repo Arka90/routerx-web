@@ -3,6 +3,6 @@ export const queryURL = {
   monitorById: (id: number) => `/monitor/${id}`,
   maintenance: (id: number) => `/monitor/${id}/maintenance`,
   incidents: (id: number) => `/incidents/${id}`,
-  uptime: (id: number) => `/incidents/${id}/uptime`,
+  uptime: (id: number, hours: number) => `/incidents/${id}/uptime?hours=${hours}`,
   probes: (id: number) => `/monitor/${id}/probes`,
 };

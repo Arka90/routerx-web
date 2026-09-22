@@ -1,4 +1,5 @@
 import { useUptime } from '@/hooks/monitor.queries';
+import { formatUptimePercentage, uptimeWindowLabel } from '@/lib/format';
 import type { Monitor } from '@/types/monitor.types';
 import { Link } from '@tanstack/react-router';
 
@@ -7,6 +8,15 @@ export function MonitorCard({ monitor }: { monitor: Monitor }) {
   const isMaintenance = monitor.in_maintenance;
   
   const { data: uptimeData } = useUptime(monitor.id);
+
+  // A monitor stored before URL validation existed can still be unparseable,
+  // and an exception here would unmount the entire grid, not just this card.
+  let hostname = monitor.url;
+  try {
+    hostname = new URL(monitor.url).hostname;
+  } catch {
+    hostname = monitor.url;
+  }
 
   let statusDotElement = <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600 animate-pulse"></span>;
   let statusText = 'Unconfirmed';
@@ -26,10 +36,7 @@ export function MonitorCard({ monitor }: { monitor: Monitor }) {
     statusTextColor = 'text-red-600 dark:text-red-500';
   }
 
-  // Round uptime to 2 decimal places if it exists
-  const formattedUptime = uptimeData 
-        ? (uptimeData.uptime_percentage === 100 ? '100' : uptimeData.uptime_percentage.toFixed(2))
-        : '...';
+  const formattedUptime = formatUptimePercentage(uptimeData);
 
   return (
     <Link 
@@ -44,7 +51,7 @@ export function MonitorCard({ monitor }: { monitor: Monitor }) {
         <div className="flex flex-col gap-1 max-w-[80%]">
           <h3 className="text-[14px] font-medium text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-2">
             {monitor.confirmed_status !== 'DOWN' && statusDotElement}
-            {new URL(monitor.url).hostname}
+            {hostname}
           </h3>
           <p className="text-[13px] text-neutral-500 truncate">{monitor.url}</p>
         </div>
@@ -57,7 +64,7 @@ export function MonitorCard({ monitor }: { monitor: Monitor }) {
       <div className="mt-auto">
         <div className="flex items-end justify-between mb-3">
             <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-neutral-400 font-medium uppercase tracking-wider">30-Day Uptime</span>
+                <span className="text-[11px] text-neutral-400 font-medium uppercase tracking-wider">{uptimeWindowLabel(uptimeData)}</span>
                 <span className="text-xl font-medium tracking-tight text-neutral-900 dark:text-neutral-100 leading-none">
                     {formattedUptime !== '...' ? `${formattedUptime}%` : '...'}
                 </span>

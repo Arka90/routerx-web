@@ -59,7 +59,13 @@ export interface UptimeResponse {
   url: string;
   uptime_percentage: number;
   total_downtime_seconds: number;
+  /** The window that was requested. */
   window_hours: number;
+  /**
+   * The window the percentage could actually be measured over. Smaller than
+   * window_hours for a monitor younger than the requested window.
+   */
+  observed_hours: number;
 }
 
 export interface Probe {
