@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StatusSlugRouteImport } from './routes/status/$slug'
 import { Route as InvitesTokenRouteImport } from './routes/invites/$token'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
@@ -19,6 +20,10 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedIncidentsRouteImport } from './routes/_authenticated/incidents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChannelsRouteImport } from './routes/_authenticated/channels'
+import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
+import { Route as StatusUnsubscribeTokenRouteImport } from './routes/status/unsubscribe/$token'
+import { Route as StatusConfirmTokenRouteImport } from './routes/status/confirm/$token'
+import { Route as AuthenticatedStatusPagePageIdRouteImport } from './routes/_authenticated/status-page/$pageId'
 import { Route as AuthenticatedMonitorMonitorIdRouteImport } from './routes/_authenticated/monitor/$monitorId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -28,6 +33,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusSlugRoute = StatusSlugRouteImport.update({
+  id: '/status/$slug',
+  path: '/status/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvitesTokenRoute = InvitesTokenRouteImport.update({
@@ -71,6 +81,27 @@ const AuthenticatedChannelsRoute = AuthenticatedChannelsRouteImport.update({
   path: '/channels',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const StatusUnsubscribeTokenRoute = StatusUnsubscribeTokenRouteImport.update({
+  id: '/status/unsubscribe/$token',
+  path: '/status/unsubscribe/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusConfirmTokenRoute = StatusConfirmTokenRouteImport.update({
+  id: '/status/confirm/$token',
+  path: '/status/confirm/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedStatusPagePageIdRoute =
+  AuthenticatedStatusPagePageIdRouteImport.update({
+    id: '/status-page/$pageId',
+    path: '/status-page/$pageId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMonitorMonitorIdRoute =
   AuthenticatedMonitorMonitorIdRouteImport.update({
     id: '/monitor/$monitorId',
@@ -80,6 +111,7 @@ const AuthenticatedMonitorMonitorIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/billing': typeof AuthenticatedBillingRoute
   '/channels': typeof AuthenticatedChannelsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/incidents': typeof AuthenticatedIncidentsRoute
@@ -88,10 +120,15 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/auth/login': typeof AuthLoginRoute
   '/invites/$token': typeof InvitesTokenRoute
+  '/status/$slug': typeof StatusSlugRoute
   '/monitor/$monitorId': typeof AuthenticatedMonitorMonitorIdRoute
+  '/status-page/$pageId': typeof AuthenticatedStatusPagePageIdRoute
+  '/status/confirm/$token': typeof StatusConfirmTokenRoute
+  '/status/unsubscribe/$token': typeof StatusUnsubscribeTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/billing': typeof AuthenticatedBillingRoute
   '/channels': typeof AuthenticatedChannelsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/incidents': typeof AuthenticatedIncidentsRoute
@@ -100,12 +137,17 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/auth/login': typeof AuthLoginRoute
   '/invites/$token': typeof InvitesTokenRoute
+  '/status/$slug': typeof StatusSlugRoute
   '/monitor/$monitorId': typeof AuthenticatedMonitorMonitorIdRoute
+  '/status-page/$pageId': typeof AuthenticatedStatusPagePageIdRoute
+  '/status/confirm/$token': typeof StatusConfirmTokenRoute
+  '/status/unsubscribe/$token': typeof StatusUnsubscribeTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/channels': typeof AuthenticatedChannelsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/incidents': typeof AuthenticatedIncidentsRoute
@@ -114,12 +156,17 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/auth/login': typeof AuthLoginRoute
   '/invites/$token': typeof InvitesTokenRoute
+  '/status/$slug': typeof StatusSlugRoute
   '/_authenticated/monitor/$monitorId': typeof AuthenticatedMonitorMonitorIdRoute
+  '/_authenticated/status-page/$pageId': typeof AuthenticatedStatusPagePageIdRoute
+  '/status/confirm/$token': typeof StatusConfirmTokenRoute
+  '/status/unsubscribe/$token': typeof StatusUnsubscribeTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/billing'
     | '/channels'
     | '/dashboard'
     | '/incidents'
@@ -128,10 +175,15 @@ export interface FileRouteTypes {
     | '/team'
     | '/auth/login'
     | '/invites/$token'
+    | '/status/$slug'
     | '/monitor/$monitorId'
+    | '/status-page/$pageId'
+    | '/status/confirm/$token'
+    | '/status/unsubscribe/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/billing'
     | '/channels'
     | '/dashboard'
     | '/incidents'
@@ -140,11 +192,16 @@ export interface FileRouteTypes {
     | '/team'
     | '/auth/login'
     | '/invites/$token'
+    | '/status/$slug'
     | '/monitor/$monitorId'
+    | '/status-page/$pageId'
+    | '/status/confirm/$token'
+    | '/status/unsubscribe/$token'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/billing'
     | '/_authenticated/channels'
     | '/_authenticated/dashboard'
     | '/_authenticated/incidents'
@@ -153,7 +210,11 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/auth/login'
     | '/invites/$token'
+    | '/status/$slug'
     | '/_authenticated/monitor/$monitorId'
+    | '/_authenticated/status-page/$pageId'
+    | '/status/confirm/$token'
+    | '/status/unsubscribe/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -161,6 +222,9 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
   InvitesTokenRoute: typeof InvitesTokenRoute
+  StatusSlugRoute: typeof StatusSlugRoute
+  StatusConfirmTokenRoute: typeof StatusConfirmTokenRoute
+  StatusUnsubscribeTokenRoute: typeof StatusUnsubscribeTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -177,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status/$slug': {
+      id: '/status/$slug'
+      path: '/status/$slug'
+      fullPath: '/status/$slug'
+      preLoaderRoute: typeof StatusSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invites/$token': {
@@ -235,6 +306,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChannelsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/billing': {
+      id: '/_authenticated/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AuthenticatedBillingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/status/unsubscribe/$token': {
+      id: '/status/unsubscribe/$token'
+      path: '/status/unsubscribe/$token'
+      fullPath: '/status/unsubscribe/$token'
+      preLoaderRoute: typeof StatusUnsubscribeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status/confirm/$token': {
+      id: '/status/confirm/$token'
+      path: '/status/confirm/$token'
+      fullPath: '/status/confirm/$token'
+      preLoaderRoute: typeof StatusConfirmTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/status-page/$pageId': {
+      id: '/_authenticated/status-page/$pageId'
+      path: '/status-page/$pageId'
+      fullPath: '/status-page/$pageId'
+      preLoaderRoute: typeof AuthenticatedStatusPagePageIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/monitor/$monitorId': {
       id: '/_authenticated/monitor/$monitorId'
       path: '/monitor/$monitorId'
@@ -246,6 +345,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedChannelsRoute: typeof AuthenticatedChannelsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedIncidentsRoute: typeof AuthenticatedIncidentsRoute
@@ -253,9 +353,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedStatusPagesRoute: typeof AuthenticatedStatusPagesRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedMonitorMonitorIdRoute: typeof AuthenticatedMonitorMonitorIdRoute
+  AuthenticatedStatusPagePageIdRoute: typeof AuthenticatedStatusPagePageIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedChannelsRoute: AuthenticatedChannelsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedIncidentsRoute: AuthenticatedIncidentsRoute,
@@ -263,6 +365,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedStatusPagesRoute: AuthenticatedStatusPagesRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedMonitorMonitorIdRoute: AuthenticatedMonitorMonitorIdRoute,
+  AuthenticatedStatusPagePageIdRoute: AuthenticatedStatusPagePageIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -274,6 +377,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
   InvitesTokenRoute: InvitesTokenRoute,
+  StatusSlugRoute: StatusSlugRoute,
+  StatusConfirmTokenRoute: StatusConfirmTokenRoute,
+  StatusUnsubscribeTokenRoute: StatusUnsubscribeTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

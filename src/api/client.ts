@@ -48,7 +48,12 @@ api.interceptors.response.use(
 
       // An invite link is viewable signed out; bouncing off it would lose
       // the token the page needs.
-      if (path && !path.startsWith('/auth') && !path.startsWith('/invites')) {
+      if (
+        path &&
+        !path.startsWith('/auth') &&
+        !path.startsWith('/invites') &&
+        !path.startsWith('/status')
+      ) {
         window.location.href = '/auth/login';
       }
     }
@@ -57,3 +62,14 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+/**
+ * For endpoints that are meant to work signed out — the public status page
+ * and its subscription flow. Deliberately has no auth interceptor: attaching
+ * a stale token would turn a public page into a 401 redirect, and the page
+ * people read during an outage must not depend on being logged in.
+ */
+export const publicApi = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+});

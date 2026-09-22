@@ -1,6 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { Send, Trash2 } from 'lucide-react'
+import {
+  Bell,
+  Hash,
+  Mail,
+  MessageCircle,
+  Send,
+  Trash2,
+  Webhook,
+  type LucideIcon,
+} from 'lucide-react'
 import {
   useChannels,
   useDeleteChannel,
@@ -10,10 +19,25 @@ import {
 import { useCanManage } from '@/stores/authStore'
 import { getApiErrorMessage } from '@/api/errors'
 import { ChannelDialog } from '@/features/channels/components/channel-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Page, PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import type { ChannelType } from '@/types/org.types'
 
 export const Route = createFileRoute('/_authenticated/channels')({
   component: ChannelsPage,
 })
+
+const TYPE_ICON: Record<ChannelType, LucideIcon> = {
+  email: Mail,
+  slack: Hash,
+  discord: MessageCircle,
+  webhook: Webhook,
+}
 
 function describe(config: Record<string, unknown>): string {
   if (typeof config.webhook_url === 'string') {
@@ -49,115 +73,131 @@ function ChannelsPage() {
   const updateChannel = useUpdateChannel()
   const deleteChannel = useDeleteChannel()
   const testChannel = useTestChannel()
+  const { confirm, dialog } = useConfirm()
 
   const channels = data?.channels ?? []
 
   return (
-    <div className="animate-in fade-in space-y-8 p-8 duration-500">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Alert channels
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-neutral-500 dark:text-neutral-400">
-            Where outages are announced. A monitor with no channels of its own notifies every
-            enabled channel here.
-          </p>
-        </div>
-
-        {canManage && <ChannelDialog />}
-      </div>
+    <Page>
+      <PageHeader
+        title="Alert channels"
+        description="Where outages are announced. A monitor with no channels of its own notifies every enabled channel here."
+        actions={canManage ? <ChannelDialog /> : undefined}
+      />
 
       {isLoading ? (
-        <div className="animate-pulse space-y-3">
-          <div className="h-16 rounded-lg bg-neutral-100 dark:bg-neutral-900" />
-          <div className="h-16 rounded-lg bg-neutral-100 dark:bg-neutral-900" />
+        <div className="space-y-3">
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
         </div>
       ) : channels.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center dark:border-neutral-800 dark:bg-[#0A0A0A]">
-          <h3 className="mb-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-            No channels configured
-          </h3>
-          <p className="text-xs text-neutral-500">
-            Without one, outages are recorded but nobody is told.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Bell />}
+          title="No channels configured"
+          description="Without one, outages are recorded but nobody is told."
+          action={canManage ? <ChannelDialog /> : undefined}
+        />
       ) : (
-        <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-          {channels.map((channel) => (
-            <div
-              key={channel.id}
-              className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                    {channel.name}
+        <div className="card divide-y divide-border">
+          {channels.map((channel) => {
+            const Icon = TYPE_ICON[channel.type] ?? Webhook
+            const testing = testChannel.isPending && testChannel.variables === channel.id
+            const toggling =
+              updateChannel.isPending && updateChannel.variables?.id === channel.id
+
+            return (
+              <div
+                key={channel.id}
+                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center"
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted-foreground">
+                    <Icon className="size-4" aria-hidden />
                   </span>
-                  <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:bg-neutral-900">
-                    {channel.type}
-                  </span>
-                  {!channel.enabled && (
-                    <span className="text-[11px] font-medium text-neutral-400">Disabled</span>
-                  )}
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {channel.name}
+                      </span>
+                      <Badge size="sm">{channel.type}</Badge>
+                      {!channel.enabled && (
+                        <Badge variant="paused" size="sm">
+                          Disabled
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                      {describe(channel.config)}
+                    </p>
+                  </div>
                 </div>
-                <p className="mt-0.5 truncate font-mono text-[12px] text-neutral-500">
-                  {describe(channel.config)}
-                </p>
+
+                {canManage && (
+                  <div className="flex shrink-0 items-center gap-2 sm:pl-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      loading={testing}
+                      onClick={() =>
+                        testChannel.mutate(channel.id, {
+                          onSuccess: () => toast.success('Test alert sent'),
+                          onError: (error) =>
+                            toast.error(getApiErrorMessage(error, 'Delivery failed'), {
+                              duration: 6000,
+                            }),
+                        })
+                      }
+                    >
+                      {!testing && <Send />}
+                      Send test
+                    </Button>
+
+                    <Switch
+                      checked={channel.enabled}
+                      disabled={toggling}
+                      aria-label={`${channel.enabled ? 'Disable' : 'Enable'} ${channel.name}`}
+                      onCheckedChange={() =>
+                        updateChannel.mutate({
+                          id: channel.id,
+                          payload: { enabled: !channel.enabled },
+                        })
+                      }
+                    />
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Delete ${channel.name}`}
+                      className="hover:bg-down-soft hover:text-down"
+                      onClick={() =>
+                        confirm({
+                          title: `Delete the channel "${channel.name}"?`,
+                          description:
+                            'Alerts stop going to this destination immediately. This cannot be undone.',
+                          confirmLabel: 'Delete channel',
+                          destructive: true,
+                          onConfirm: () =>
+                            deleteChannel.mutate(channel.id, {
+                              onSuccess: () => toast.success('Channel deleted'),
+                              onError: (error) =>
+                                toast.error(getApiErrorMessage(error, 'Could not delete')),
+                            }),
+                        })
+                      }
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                )}
               </div>
-
-              {canManage && (
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={() =>
-                      testChannel.mutate(channel.id, {
-                        onSuccess: () => toast.success('Test alert sent'),
-                        onError: (error) =>
-                          toast.error(getApiErrorMessage(error, 'Delivery failed'), {
-                            duration: 6000,
-                          }),
-                      })
-                    }
-                    disabled={testChannel.isPending}
-                    className="flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-                  >
-                    <Send className="h-3 w-3" />
-                    Test
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      updateChannel.mutate({
-                        id: channel.id,
-                        payload: { enabled: !channel.enabled },
-                      })
-                    }
-                    className="rounded-md border border-neutral-200 px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-                  >
-                    {channel.enabled ? 'Disable' : 'Enable'}
-                  </button>
-
-                  <button
-                    aria-label={`Delete ${channel.name}`}
-                    onClick={() => {
-                      if (!confirm(`Delete the channel "${channel.name}"?`)) return
-
-                      deleteChannel.mutate(channel.id, {
-                        onSuccess: () => toast.success('Channel deleted'),
-                        onError: (error) =>
-                          toast.error(getApiErrorMessage(error, 'Could not delete')),
-                      })
-                    }}
-                    className="rounded-md border border-neutral-200 p-1.5 text-neutral-400 transition-colors hover:text-red-600 dark:border-neutral-800"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
-    </div>
+
+      {dialog}
+    </Page>
   )
 }

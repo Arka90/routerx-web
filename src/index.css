@@ -1,53 +1,228 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
 @import './styles/tokens.css';
 
-@theme {
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+/* next-themes toggles a `.dark` class on <html>; make dark: follow it. */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  --color-bg-base: var(--bg-base);
-  --color-bg-surface: var(--bg-surface);
-  --color-bg-elevated: var(--bg-elevated);
-  --color-bg-hover: var(--bg-hover);
+@theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-border-subtle: var(--border-subtle);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
 
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
-  --color-text-disabled: var(--text-disabled);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
-  --color-accent: var(--accent-primary);
-  --color-accent-soft: var(--accent-soft);
+  --color-up: var(--up);
+  --color-up-soft: var(--up-soft);
+  --color-degraded: var(--degraded);
+  --color-degraded-soft: var(--degraded-soft);
+  --color-down: var(--down);
+  --color-down-soft: var(--down-soft);
+  --color-maintenance: var(--maintenance);
+  --color-maintenance-soft: var(--maintenance-soft);
+  --color-paused: var(--paused);
+  --color-paused-soft: var(--paused-soft);
+  --color-unknown: var(--unknown);
+  --color-unknown-soft: var(--unknown-soft);
 
-  --color-status-up: var(--status-up);
-  --color-status-degraded: var(--status-degraded);
-  --color-status-down: var(--status-down);
-  --color-status-paused: var(--status-paused);
-  --color-status-unknown: var(--status-unknown);
+  --color-chart-dns: var(--chart-dns);
+  --color-chart-tcp: var(--chart-tcp);
+  --color-chart-tls: var(--chart-tls);
+  --color-chart-ttfb: var(--chart-ttfb);
 
-  --color-chart-latency: var(--chart-latency);
-  --color-chart-uptime: var(--chart-uptime);
-  --color-chart-error: var(--chart-error);
-  --color-chart-retry: var(--chart-retry);
-  --color-chart-grid: var(--chart-grid);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
 
-  @keyframes shiny {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --animate-fade-in: fade-in 0.4s ease both;
+  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-scan: scan 6s linear infinite;
+  --animate-dash: dash 1.8s ease-out both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
-  --animate-shiny: shiny 2s infinite linear;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.7; }
+    70% { transform: scale(2.4); opacity: 0; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes scan {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+  @keyframes dash {
+    from { stroke-dashoffset: 1000; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
 }
 
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-bg-base text-text-primary antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--foreground);
   }
 
   *:focus-visible {
-    outline: 2px solid var(--accent-primary);
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  /* Thin, theme-aware scrollbars keep the dark dashboard from showing a
+     bright OS scrollbar down the side of the content column. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-border bg-card;
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
+  }
+
+  .card-hover {
+    @apply transition-[border-color,box-shadow,transform] duration-200;
+  }
+  .card-hover:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md), var(--shadow-inset);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle-foreground;
+  }
+
+  .link {
+    @apply text-brand underline-offset-4 hover:underline;
+  }
+
+  .skeleton {
+    @apply rounded-md bg-surface-2;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--surface-3) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* Dotted engineering grid used on marketing and empty surfaces. */
+  .grid-dots {
+    background-image: radial-gradient(circle at 1px 1px, var(--border-strong) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, var(--border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .glow-brand {
+    box-shadow: 0 0 0 1px var(--brand-soft), 0 0 40px -8px var(--brand-glow);
+  }
+
+  .status-dot {
+    @apply relative inline-flex h-2 w-2 shrink-0 rounded-full;
+  }
+  .status-dot[data-live='true']::before {
+    content: '';
+    @apply absolute inset-0 rounded-full;
+    background: inherit;
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .browser-frame {
+    @apply overflow-hidden rounded-2xl border border-border bg-card;
+    box-shadow: var(--shadow-lg), var(--shadow-inset);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

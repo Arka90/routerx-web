@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { Activity, Bell, ChevronLeft, Clock, Settings, Trash2 } from 'lucide-react'
+import {
+  Activity,
+  Bell,
+  CalendarClock,
+  ChevronLeft,
+  Clock,
+  ExternalLink,
+  Settings,
+  Trash2,
+} from 'lucide-react'
 import {
   useDeleteMaintenance,
   useDeleteMonitor,
@@ -16,35 +25,55 @@ import {
 import { useCanManage } from '@/stores/authStore'
 import { getApiErrorMessage } from '@/api/errors'
 import { ProbeGraph } from '@/components/ProbeGraph'
-import { PremiumField } from '@/components/ui/premium-field'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Page, PageHeader, SectionHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard } from '@/components/ui/stat-card'
+import { StatusBadge, StatusDot, type StatusTone } from '@/components/ui/status'
+import { Tabs, TabsBar, TabsBarTrigger, TabsContent } from '@/components/ui/tabs'
 import { MonitorForm, type MonitorFormValues } from '@/features/dashboard/components/monitor-form'
 import { AlertPolicyPanel } from '@/features/monitor/components/alert-policy-panel'
 import { IncidentList } from '@/features/monitor/components/incident-list'
-import { formatDuration, formatUptimePercentage, uptimeWindowLabel } from '@/lib/format'
-import { presentStatus } from '@/lib/status'
-import { cn } from '@/lib/utils'
+import { RegionStatus } from '@/features/monitor/components/region-status'
+import { useRegions } from '@/hooks/status.queries'
+import {
+  daysUntil,
+  formatDate,
+  formatDateTime,
+  formatDuration,
+  formatInterval,
+  formatRelative,
+  formatUptimePercentage,
+  uptimeWindowLabel,
+} from '@/lib/format'
+import { humanizeRootCause, presentStatus } from '@/lib/status'
+import type { Probe } from '@/types/monitor.types'
 
 export const Route = createFileRoute('/_authenticated/monitor/$monitorId')({
   component: MonitorPage,
 })
 
-type Tab = 'probes' | 'incidents' | 'alerts' | 'maintenance' | 'settings'
+/** How many of the newest probes the overview table lists. */
+const RECENT_CHECKS = 12
 
-const TABS: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
-  { id: 'probes', label: 'Probes', icon: Activity },
-  { id: 'incidents', label: 'Incidents', icon: Clock },
-  { id: 'alerts', label: 'Alerts', icon: Bell },
-  { id: 'maintenance', label: 'Schedule', icon: Clock },
-  { id: 'settings', label: 'Settings', icon: Settings },
-]
+function probeTone(status: string): StatusTone {
+  if (status === 'UP') return 'up'
+  if (status === 'DEGRADED') return 'degraded'
+  return 'down'
+}
 
 function MonitorPage() {
   const { monitorId } = Route.useParams()
   const numericId = Number.parseInt(monitorId, 10)
   const navigate = useNavigate()
   const canManage = useCanManage()
+  const { confirm, dialog } = useConfirm()
 
-  const [activeTab, setActiveTab] = useState<Tab>('probes')
   const [reason, setReason] = useState('')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
@@ -56,38 +85,70 @@ function MonitorPage() {
   const { data: probesData, isLoading: isProbesLoading } = useProbes(numericId)
   const { data: maintenanceData, isLoading: isMaintenanceLoading } =
     useGetMaintenance(numericId)
+  const { data: regionData } = useRegions()
 
   const setMaintenance = useSetMaintenance()
   const deleteMaintenance = useDeleteMaintenance()
   const deleteMonitor = useDeleteMonitor()
   const updateMonitor = useUpdateMonitor()
 
+  // Newest first for the table; the graph sorts the other way itself.
+  const recentProbes = useMemo<Probe[]>(
+    () =>
+      [...(probesData ?? [])]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, RECENT_CHECKS),
+    [probesData]
+  )
+
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl animate-pulse space-y-4 p-8">
-        <div className="h-8 w-48 rounded bg-neutral-200 dark:bg-neutral-800" />
-        <div className="h-64 rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-[#0A0A0A]" />
-      </div>
+      <Page width="wide">
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-96 max-w-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-[104px] rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-10 w-full max-w-lg" />
+        <Skeleton className="h-[440px] rounded-xl" />
+      </Page>
     )
   }
 
   if (isError || !monitor) {
     return (
-      <div className="mx-auto max-w-4xl rounded-xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center text-neutral-500 dark:border-neutral-800 dark:bg-[#0A0A0A]">
-        <h3 className="mb-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-          Monitor not found
-        </h3>
-        <p className="mb-4 text-xs">
-          It may have been deleted, or it belongs to another workspace.
-        </p>
-        <Link to="/dashboard" className="text-sm font-medium hover:underline">
-          Return to dashboard
-        </Link>
-      </div>
+      <Page width="wide">
+        <EmptyState
+          icon={<Activity />}
+          title="Monitor not found"
+          description="It may have been deleted, or it belongs to another workspace."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link to="/dashboard">
+                <ChevronLeft />
+                Back to monitors
+              </Link>
+            </Button>
+          }
+        />
+      </Page>
     )
   }
 
   const status = presentStatus(monitor)
+  const latestProbe = recentProbes[0]
+  const regionStates = monitor.region_states ?? []
+  const regions = regionData?.regions ?? []
+
+  // Certificate card: red inside a week, amber inside a month.
+  const tlsDays = daysUntil(monitor.tls_expiry_at)
+  const tlsTone: 'default' | 'down' | 'degraded' =
+    tlsDays === null ? 'default' : tlsDays < 7 ? 'down' : tlsDays < 30 ? 'degraded' : 'default'
 
   const handleSetMaintenance = (event: React.FormEvent) => {
     event.preventDefault()
@@ -132,18 +193,36 @@ function MonitorPage() {
     )
   }
 
-  const handleDelete = () => {
-    if (!confirm('Delete this monitor and all of its history?')) return
-
-    deleteMonitor.mutate(monitor.id, {
-      onSuccess: () => {
-        toast.success('Monitor deleted')
-        navigate({ to: '/dashboard' })
-      },
-      onError: (error) =>
-        toast.error(getApiErrorMessage(error, 'Could not delete that monitor')),
+  const handleCancelMaintenance = () =>
+    confirm({
+      title: 'Cancel this maintenance window?',
+      description: 'Checks and alerts for this monitor resume straight away.',
+      confirmLabel: 'Cancel window',
+      cancelLabel: 'Keep it',
+      destructive: true,
+      onConfirm: () =>
+        deleteMaintenance.mutate(monitor.id, {
+          onSuccess: () => toast.success('Maintenance cancelled'),
+          onError: (error) => toast.error(getApiErrorMessage(error, 'Could not cancel')),
+        }),
     })
-  }
+
+  const handleDelete = () =>
+    confirm({
+      title: 'Delete this monitor and all of its history?',
+      description: `${monitor.name ?? monitor.url} will stop being checked, and every incident and recorded probe goes with it. This cannot be undone.`,
+      confirmLabel: 'Delete monitor',
+      destructive: true,
+      onConfirm: () =>
+        deleteMonitor.mutate(monitor.id, {
+          onSuccess: () => {
+            toast.success('Monitor deleted')
+            navigate({ to: '/dashboard' })
+          },
+          onError: (error) =>
+            toast.error(getApiErrorMessage(error, 'Could not delete that monitor')),
+        }),
+    })
 
   const handleUpdate = (values: MonitorFormValues) => {
     setSettingsError(null)
@@ -159,245 +238,413 @@ function MonitorPage() {
   }
 
   return (
-    <div className="animate-in fade-in flex h-full w-full flex-col duration-500">
-      <div className="mx-auto w-full max-w-[1600px] flex-1 space-y-8 p-8">
-        <div className="flex flex-col items-start justify-between gap-4 border-b border-neutral-200 pb-6 dark:border-neutral-800 sm:flex-row sm:items-center">
-          <div className="min-w-0">
-            <Link
-              to="/dashboard"
-              className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
-            >
-              <ChevronLeft className="h-4 w-4" /> Dashboard
-            </Link>
+    <Page width="wide">
+      <div className="space-y-3">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-1 rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+          Monitors
+        </Link>
 
-            <h1 className="flex flex-wrap items-center gap-4 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+        <PageHeader
+          title={
+            <span className="flex flex-wrap items-center gap-3">
               <span className="break-all">{monitor.name ?? monitor.url}</span>
-              <span
-                className={`rounded-sm px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${status.badge} ${status.text}`}
-              >
-                {status.label}
-              </span>
-            </h1>
+              <StatusBadge tone={status.tone} label={status.label} live={status.live} />
+            </span>
+          }
+          description={
+            <span className="font-mono text-[13px] break-all">
+              <span className="mr-1.5 text-subtle-foreground">{monitor.method}</span>
+              {monitor.url}
+            </span>
+          }
+          actions={
+            <>
+              <Button asChild variant="outline" size="sm">
+                <a href={monitor.url} target="_blank" rel="noreferrer">
+                  <ExternalLink />
+                  Open URL
+                </a>
+              </Button>
 
-            {monitor.name && (
-              <p className="mt-1 break-all text-sm text-neutral-500">
-                <span className="mr-1.5 font-mono text-[11px] uppercase">{monitor.method}</span>
-                {monitor.url}
-              </p>
-            )}
-          </div>
-
-          {canManage && (
-            <button
-              onClick={handleDelete}
-              disabled={deleteMonitor.isPending}
-              className="flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-[13px] font-bold text-red-600 transition-all hover:bg-red-50 disabled:opacity-50 dark:text-red-500 dark:hover:bg-red-900/20"
-              title="Delete monitor"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <StatCard
-            label={uptimeWindowLabel(uptimeData)}
-            value={isUptimeLoading ? '…' : `${formatUptimePercentage(uptimeData)}%`}
-          />
-          <StatCard
-            label="Total downtime"
-            value={isUptimeLoading ? '…' : formatDuration(uptimeData?.total_downtime_seconds)}
-          />
-          <StatCard
-            label="Success streak"
-            value={String(monitor.consecutive_successes)}
-            accent="border-l-emerald-500/50 dark:border-l-emerald-500/30"
-            valueClass="text-emerald-600 dark:text-emerald-500"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-1 rounded-xl border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900/50">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center gap-2 rounded-lg px-5 py-2.5 text-[13px] font-bold uppercase tracking-widest transition-all',
-                activeTab === tab.id
-                  ? 'bg-white text-neutral-900 shadow-md dark:bg-neutral-800 dark:text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+              {canManage && (
+                <Button
+                  variant="destructive"
+                  size="icon-sm"
+                  aria-label="Delete monitor"
+                  title="Delete monitor"
+                  onClick={handleDelete}
+                  loading={deleteMonitor.isPending}
+                >
+                  {!deleteMonitor.isPending && <Trash2 />}
+                </Button>
               )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+            </>
+          }
+        />
+      </div>
 
-        <div className="min-h-[500px]">
-          {activeTab === 'probes' && (
-            <section className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium tracking-tight text-neutral-900 dark:text-neutral-100">
-                  Response timing
-                </h3>
-                <p className="text-sm text-neutral-500">
-                  Per-layer breakdown, refreshed every 10 seconds.
-                </p>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          label={uptimeWindowLabel(uptimeData)}
+          value={`${formatUptimePercentage(uptimeData)}%`}
+          loading={isUptimeLoading}
+        />
+        <StatCard
+          label="Total downtime"
+          value={formatDuration(uptimeData?.total_downtime_seconds)}
+          hint="Across the same window"
+          loading={isUptimeLoading}
+        />
+        <StatCard
+          label="Success streak"
+          value={monitor.consecutive_successes}
+          tone="up"
+          hint="Consecutive passing checks"
+        />
+        <StatCard
+          label="Certificate"
+          tone={tlsTone}
+          value={
+            tlsDays === null ? (
+              <span className="text-base font-medium text-muted-foreground">No TLS data</span>
+            ) : tlsDays < 0 ? (
+              'Expired'
+            ) : (
+              `${tlsDays}d`
+            )
+          }
+          hint={
+            monitor.tls_expiry_at
+              ? `Expires ${formatDate(monitor.tls_expiry_at)}`
+              : 'Not HTTPS, or no successful check yet'
+          }
+        />
+      </div>
+
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsBar aria-label="Monitor sections">
+          <TabsBarTrigger value="overview">
+            <Activity />
+            Overview
+          </TabsBarTrigger>
+          <TabsBarTrigger value="incidents">
+            <Clock />
+            Incidents
+            {incidentsData?.total ? (
+              <Badge
+                size="sm"
+                variant={incidentsData.open_incident ? 'down' : 'neutral'}
+                className="tabular"
+              >
+                {incidentsData.total}
+              </Badge>
+            ) : null}
+          </TabsBarTrigger>
+          <TabsBarTrigger value="alerts">
+            <Bell />
+            Alerts
+          </TabsBarTrigger>
+          <TabsBarTrigger value="maintenance">
+            <CalendarClock />
+            Maintenance
+          </TabsBarTrigger>
+          <TabsBarTrigger value="settings">
+            <Settings />
+            Settings
+          </TabsBarTrigger>
+        </TabsBar>
+
+        <TabsContent value="overview" className="space-y-6">
+          {isProbesLoading ? (
+            <Skeleton className="h-[460px] w-full rounded-xl" />
+          ) : (
+            <ProbeGraph data={probesData ?? []} />
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <section className="card overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-4">
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                    Recent checks
+                  </h3>
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">
+                    Last {RECENT_CHECKS} probes, newest first
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Latest check{' '}
+                  <span
+                    className="font-medium text-foreground"
+                    title={latestProbe ? new Date(latestProbe.timestamp).toLocaleString() : undefined}
+                  >
+                    {latestProbe ? formatRelative(latestProbe.timestamp) : '—'}
+                  </span>
+                </span>
               </div>
 
               {isProbesLoading ? (
-                <div className="h-[500px] w-full animate-pulse border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
-              ) : (
-                <ProbeGraph data={probesData ?? []} />
-              )}
-            </section>
-          )}
-
-          {activeTab === 'incidents' && (
-            <section className="space-y-6">
-              <h3 className="text-lg font-medium tracking-tight text-neutral-900 dark:text-neutral-100">
-                Incident history
-              </h3>
-
-              {isIncidentsLoading ? (
-                <div className="animate-pulse space-y-4">
-                  <div className="h-24 border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
-                  <div className="h-24 border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
+                <div className="space-y-2 p-5">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Skeleton key={index} className="h-6 w-full" />
+                  ))}
                 </div>
-              ) : (
-                <IncidentList incidents={incidentsData?.incidents ?? []} />
-              )}
-            </section>
-          )}
-
-          {activeTab === 'alerts' && <AlertPolicyPanel monitor={monitor} />}
-
-          {activeTab === 'maintenance' && (
-            <section className="max-w-2xl space-y-8">
-              <div>
-                <h3 className="mb-2 text-xl font-medium tracking-tight text-neutral-900 dark:text-neutral-100">
-                  Schedule maintenance
-                </h3>
-                <p className="text-sm text-neutral-500">
-                  Suppress checks and alerts during a deployment window, so a planned restart
-                  doesn't read as an outage.
+              ) : recentProbes.length === 0 ? (
+                <p className="px-5 py-8 text-center text-[13px] text-muted-foreground">
+                  No checks recorded yet.
                 </p>
-              </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px]">
+                    <thead>
+                      <tr className="text-left">
+                        <th scope="col" className="eyebrow px-5 py-2.5 font-semibold">
+                          Time
+                        </th>
+                        <th scope="col" className="eyebrow px-3 py-2.5 font-semibold">
+                          Status
+                        </th>
+                        <th scope="col" className="eyebrow px-3 py-2.5 font-semibold">
+                          HTTP
+                        </th>
+                        <th scope="col" className="eyebrow px-3 py-2.5 text-right font-semibold">
+                          Total ms
+                        </th>
+                        <th scope="col" className="eyebrow px-5 py-2.5 font-semibold">
+                          Root cause
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {recentProbes.map((probe) => {
+                        const tone = probeTone(probe.status)
 
-              {isMaintenanceLoading ? (
-                <div className="h-32 w-full animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-900" />
-              ) : monitor.in_maintenance && maintenanceData?.maintenance ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-900/10">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <h4 className="mb-1 font-semibold text-amber-900 dark:text-amber-500">
-                        Maintenance window active
-                      </h4>
-                      <p className="text-sm font-medium text-amber-700 dark:text-amber-600">
-                        {maintenanceData.maintenance.reason}
-                      </p>
-                    </div>
+                        return (
+                          <tr key={probe.id} className="transition-colors hover:bg-accent/50">
+                            <td className="px-5 py-2.5 whitespace-nowrap text-foreground">
+                              {formatDateTime(probe.timestamp)}
+                            </td>
+                            <td className="px-3 py-2.5 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-2">
+                                <StatusDot tone={tone} />
+                                <span className="capitalize text-foreground">
+                                  {probe.status.toLowerCase()}
+                                </span>
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 font-mono text-[12px] text-muted-foreground">
+                              {probe.http_status_code ?? '—'}
+                            </td>
+                            <td className="tabular px-3 py-2.5 text-right font-mono text-[12px] text-foreground">
+                              {probe.responseTime}
+                            </td>
+                            <td className="max-w-[220px] truncate px-5 py-2.5 text-muted-foreground">
+                              {humanizeRootCause(probe.root_cause) ?? '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
-                    {canManage && (
-                      <button
-                        onClick={() => {
-                          if (!confirm('Cancel this maintenance window?')) return
-
-                          deleteMaintenance.mutate(monitor.id, {
-                            onSuccess: () => toast.success('Maintenance cancelled'),
-                            onError: (error) =>
-                              toast.error(getApiErrorMessage(error, 'Could not cancel')),
-                          })
-                        }}
-                        disabled={deleteMaintenance.isPending}
-                        className="shrink-0 rounded-lg border border-amber-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-[#111] dark:text-amber-500 dark:hover:bg-amber-900/40"
-                      >
-                        {deleteMaintenance.isPending ? 'Cancelling…' : 'Cancel'}
-                      </button>
-                    )}
+            {/* RegionStatus renders nothing for a single vantage point, so
+                say where the checks come from instead of leaving a gap. */}
+            {regionStates.length > 1 ? (
+              <RegionStatus
+                states={regionStates}
+                regions={regions}
+                confirmations={monitor.policy.confirmations}
+              />
+            ) : (
+              <section className="card space-y-4 p-5">
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                  Checked from one region
+                </h3>
+                <dl className="grid grid-cols-2 gap-3 text-[13px]">
+                  <div>
+                    <dt className="eyebrow">Region</dt>
+                    <dd className="mt-1 text-foreground">
+                      {regionStates[0]
+                        ? (regions.find((region) => region.code === regionStates[0].region)
+                            ?.name ?? regionStates[0].region)
+                        : 'Default'}
+                    </dd>
                   </div>
+                  <div>
+                    <dt className="eyebrow">Interval</dt>
+                    <dd className="mt-1 text-foreground">
+                      {formatInterval(monitor.interval_seconds)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="eyebrow">Timeout</dt>
+                    <dd className="tabular mt-1 font-mono text-[12px] text-foreground">
+                      {monitor.timeout_ms} ms
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="eyebrow">Last checked</dt>
+                    <dd className="mt-1 text-foreground">
+                      {formatRelative(regionStates[0]?.last_checked_at ?? latestProbe?.timestamp)}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Add regions in Settings to compare vantage points and require agreement
+                  before an incident opens.
+                </p>
+              </section>
+            )}
+          </div>
+        </TabsContent>
 
-                  <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-                    {(
-                      [
-                        ['Starts', maintenanceData.maintenance.starts_at],
-                        ['Ends', maintenanceData.maintenance.ends_at],
-                      ] as const
-                    ).map(([label, value]) => (
-                      <div
-                        key={label}
-                        className="rounded-lg border border-amber-100 bg-white/50 p-3 dark:border-amber-900/30 dark:bg-black/20"
-                      >
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-amber-600/70 dark:text-amber-500/70">
-                          {label}
-                        </p>
-                        <p className="font-medium text-amber-900 dark:text-amber-400">
-                          {new Date(value).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
+        <TabsContent value="incidents" className="space-y-4">
+          <SectionHeader
+            title="Incident history"
+            description={
+              incidentsData
+                ? `${incidentsData.total} recorded${incidentsData.open_incident ? ' · one open now' : ''}`
+                : undefined
+            }
+          />
+
+          {isIncidentsLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-28 rounded-xl" />
+              <Skeleton className="h-28 rounded-xl" />
+            </div>
+          ) : (
+            <IncidentList incidents={incidentsData?.incidents ?? []} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="alerts">
+          <AlertPolicyPanel monitor={monitor} />
+        </TabsContent>
+
+        <TabsContent value="maintenance" className="max-w-2xl space-y-6">
+          <SectionHeader
+            title="Schedule maintenance"
+            description="Suppress checks and alerts during a deployment window, so a planned restart doesn't read as an outage."
+          />
+
+          {isMaintenanceLoading ? (
+            <Skeleton className="h-36 w-full rounded-xl" />
+          ) : monitor.in_maintenance && maintenanceData?.maintenance ? (
+            <div className="card border-maintenance/30 bg-maintenance-soft p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <StatusDot tone="maintenance" live className="mt-1.5" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Maintenance window active
+                    </h3>
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">
+                      {maintenanceData.maintenance.reason}
+                    </p>
                   </div>
                 </div>
-              ) : canManage ? (
-                <form onSubmit={handleSetMaintenance} className="grid grid-cols-1 gap-8">
-                  <PremiumField
-                    id="reason"
-                    label="Reason"
-                    helperText="Recorded against the window for later reference."
-                    value={reason}
-                    onChange={(event) => setReason(event.target.value)}
-                    placeholder="e.g. Database migration v2"
-                  />
 
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                    <PremiumField
-                      id="starts_at"
-                      type="datetime-local"
-                      label="Starts at"
-                      value={startsAt}
-                      onChange={(event) => setStartsAt(event.target.value)}
-                      helperText="When checks should pause."
-                      onClick={(event) => event.currentTarget.showPicker?.()}
-                    />
-                    <PremiumField
-                      id="ends_at"
-                      type="datetime-local"
-                      label="Ends at"
-                      value={endsAt}
-                      onChange={(event) => setEndsAt(event.target.value)}
-                      helperText="Checks resume automatically."
-                      onClick={(event) => event.currentTarget.showPicker?.()}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={setMaintenance.isPending}
-                    className="mt-2 h-12 rounded-xl bg-neutral-900 px-4 text-[13px] font-bold uppercase tracking-[0.2em] text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelMaintenance}
+                    loading={deleteMaintenance.isPending}
                   >
-                    {setMaintenance.isPending ? 'Scheduling…' : 'Confirm window'}
-                  </button>
-                </form>
-              ) : (
-                <p className="text-sm text-neutral-500">
-                  No maintenance is scheduled. Ask an admin to schedule one.
-                </p>
-              )}
-            </section>
-          )}
-
-          {activeTab === 'settings' && (
-            <section className="max-w-2xl space-y-8">
-              <div>
-                <h3 className="mb-2 text-xl font-medium tracking-tight text-neutral-900 dark:text-neutral-100">
-                  Monitor settings
-                </h3>
-                <p className="text-sm text-neutral-500">
-                  What we request, and what counts as healthy.
-                </p>
+                    Cancel window
+                  </Button>
+                )}
               </div>
 
-              {canManage ? (
+              <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                {(
+                  [
+                    ['Starts', maintenanceData.maintenance.starts_at],
+                    ['Ends', maintenanceData.maintenance.ends_at],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-lg border border-maintenance/20 bg-card/70 px-3 py-2.5"
+                  >
+                    <dt className="eyebrow">{label}</dt>
+                    <dd
+                      className="mt-1 font-medium text-foreground"
+                      title={new Date(value).toLocaleString()}
+                    >
+                      {formatDateTime(value)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : canManage ? (
+            <form onSubmit={handleSetMaintenance} className="card space-y-5 p-5">
+              <Field
+                id="reason"
+                label="Reason"
+                hint="Recorded against the window for later reference."
+              >
+                <Input
+                  id="reason"
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  placeholder="e.g. Database migration v2"
+                />
+              </Field>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field id="starts_at" label="Starts at" hint="When checks should pause.">
+                  <Input
+                    id="starts_at"
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(event) => setStartsAt(event.target.value)}
+                    onClick={(event) => event.currentTarget.showPicker?.()}
+                  />
+                </Field>
+                <Field id="ends_at" label="Ends at" hint="Checks resume automatically.">
+                  <Input
+                    id="ends_at"
+                    type="datetime-local"
+                    value={endsAt}
+                    onChange={(event) => setEndsAt(event.target.value)}
+                    onClick={(event) => event.currentTarget.showPicker?.()}
+                  />
+                </Field>
+              </div>
+
+              <div className="pt-1">
+                <Button type="submit" variant="primary" loading={setMaintenance.isPending}>
+                  <CalendarClock />
+                  Confirm window
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No maintenance is scheduled. Ask an admin to schedule one.
+            </p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="settings" className="max-w-2xl space-y-6">
+          <SectionHeader
+            title="Monitor settings"
+            description="What we request, and what counts as healthy."
+          />
+
+          {canManage ? (
+            <>
+              <div className="card p-5">
                 <MonitorForm
                   key={monitor.updated_at}
                   initial={monitor}
@@ -406,41 +653,39 @@ function MonitorPage() {
                   onSubmit={handleUpdate}
                   error={settingsError}
                 />
-              ) : (
-                <p className="text-sm text-neutral-500">
-                  You have read-only access to this workspace.
-                </p>
-              )}
-            </section>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+              </div>
 
-function StatCard({
-  label,
-  value,
-  accent = 'border-l-neutral-200/50 dark:border-l-neutral-800/50',
-  valueClass = 'text-neutral-900 dark:text-neutral-100',
-}: {
-  label: string
-  value: string
-  accent?: string
-  valueClass?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'flex flex-col justify-center border-y border-r border-l-2 border-neutral-100 bg-neutral-50 p-6 dark:border-neutral-900 dark:bg-[#111]',
-        accent
-      )}
-    >
-      <p className="mb-3 text-[11px] font-medium uppercase tracking-widest text-neutral-500">
-        {label}
-      </p>
-      <p className={cn('text-4xl font-light tracking-tight', valueClass)}>{value}</p>
-    </div>
+              <div className="card border-down/30 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                      Danger zone
+                    </h3>
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">
+                      Deleting removes the monitor, its incidents and every recorded check.
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDelete}
+                    loading={deleteMonitor.isPending}
+                  >
+                    <Trash2 />
+                    Delete monitor
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              You have read-only access to this workspace.
+            </p>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {dialog}
+    </Page>
   )
 }

@@ -1,59 +1,113 @@
-import type { Monitor } from '@/types/monitor.types';
-import { MonitorCard } from './monitor-card';
+import { Activity, SearchX } from 'lucide-react'
+import { useCanManage } from '@/stores/authStore'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
+import type { Monitor } from '@/types/monitor.types'
+import { CreateMonitorModal } from './create-monitor-modal'
+import { MonitorCard } from './monitor-card'
 
 interface MonitorGridProps {
-  monitors: Monitor[];
-  isLoading: boolean;
-  isError: boolean;
+  monitors: Monitor[]
+  isLoading: boolean
+  isError: boolean
+  /** True when a search or filter may be hiding monitors that do exist. */
+  filtered?: boolean
+  onClearFilters?: () => void
 }
 
-export function MonitorGrid({ monitors, isLoading, isError }: MonitorGridProps) {
+const GRID_CLASS = 'grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3'
+
+function MonitorCardSkeleton() {
+  return (
+    <div className="card flex min-h-[152px] flex-col justify-between p-5" aria-hidden>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-5 w-20" />
+        </div>
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+      <div className="flex items-end justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-2.5 w-20" />
+          <Skeleton className="h-6 w-16" />
+        </div>
+        <div className="flex gap-1.5">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-12" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function MonitorGrid({
+  monitors,
+  isLoading,
+  isError,
+  filtered = false,
+  onClearFilters,
+}: MonitorGridProps) {
+  const canManage = useCanManage()
+
   if (isError) {
     return (
-      <div className="p-4 rounded-xl bg-red-50 text-red-600 dark:bg-red-900/10 dark:text-red-400 border border-red-200 dark:border-red-800/20 text-sm">
+      <div className="card border-down/30 bg-down-soft p-4 text-sm text-down">
         Failed to load monitors. Please check your connection.
       </div>
-    );
+    )
   }
 
   if (isLoading && !monitors.length) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-neutral-800 rounded-xl p-5 min-h-[160px] animate-pulse">
-             <div className="flex justify-between items-start">
-               <div className="w-1/2 h-4 bg-neutral-200 dark:bg-neutral-800 rounded"></div>
-               <div className="w-16 h-4 bg-neutral-200 dark:bg-neutral-800 rounded"></div>
-             </div>
-             <div className="mt-8 w-3/4 h-3 bg-neutral-100 dark:bg-neutral-900 rounded"></div>
-             <div className="mt-6 flex gap-[2px] h-6">
-                {Array.from({ length: 40 }).map((_, j) => (
-                  <div key={j} className="flex-1 bg-neutral-100 dark:bg-neutral-900 rounded-sm"></div>
-                ))}
-             </div>
-          </div>
+      <div className={GRID_CLASS}>
+        {Array.from({ length: 6 }).map((_, index) => (
+          <MonitorCardSkeleton key={index} />
         ))}
       </div>
-    );
+    )
   }
 
   if (monitors.length === 0) {
+    if (filtered) {
+      return (
+        <EmptyState
+          icon={<SearchX />}
+          title="No monitors match"
+          description="Try a different search, or clear the filter to see every monitor."
+          action={
+            onClearFilters && (
+              <Button variant="outline" size="sm" onClick={onClearFilters}>
+                Clear filters
+              </Button>
+            )
+          }
+        />
+      )
+    }
+
+    // CreateMonitorModal renders nothing for members, so only offer the
+    // action when it will actually appear — otherwise point at an admin.
     return (
-      <div className="py-16 text-center text-neutral-500 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-[#0A0A0A]">
-        <h3 className="text-sm font-medium mb-1 text-neutral-900 dark:text-neutral-100">No monitors configured</h3>
-        <p className="text-xs">Add a monitor to start tracking its performance.</p>
-      </div>
-    );
+      <EmptyState
+        icon={<Activity />}
+        title="No monitors yet"
+        description={
+          canManage
+            ? 'Add the first endpoint to start tracking its uptime, latency and certificate. Checks begin within a minute.'
+            : 'Nothing is being watched in this workspace yet. Ask an admin to add the first monitor.'
+        }
+        action={canManage ? <CreateMonitorModal /> : undefined}
+      />
+    )
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className={GRID_CLASS}>
       {monitors.map((monitor) => (
-        <MonitorCard 
-          key={monitor.id} 
-          monitor={monitor} 
-        />
+        <MonitorCard key={monitor.id} monitor={monitor} />
       ))}
     </div>
-  );
+  )
 }

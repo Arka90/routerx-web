@@ -1,11 +1,19 @@
 import { useState } from 'react'
-import { Check, ChevronsUpDown, Plus } from 'lucide-react'
+import { Building2, ChevronsUpDown, Plus } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { useCreateOrganization } from '@/hooks/org.queries'
 import { getApiErrorMessage } from '@/api/errors'
-import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuCheckItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -14,10 +22,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Field } from '@/components/ui/field'
 
 export function WorkspaceSwitcher() {
   const { organizations, activeOrgId, setActiveOrg } = useAuthStore((state) => state.auth)
-  const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
 
@@ -27,13 +36,9 @@ export function WorkspaceSwitcher() {
   const active = organizations.find((org) => org.id === activeOrgId)
 
   const switchTo = (orgId: number) => {
-    if (orgId === activeOrgId) {
-      setOpen(false)
-      return
-    }
+    if (orgId === activeOrgId) return
 
     setActiveOrg(orgId)
-    setOpen(false)
 
     // Every cached list is scoped to the previous workspace, so drop all of
     // it rather than briefly showing another workspace's monitors.
@@ -60,59 +65,46 @@ export function WorkspaceSwitcher() {
 
   return (
     <>
-      <div className="relative px-3 pb-3">
-        <button
-          onClick={() => setOpen((value) => !value)}
-          className="flex w-full items-center justify-between gap-2 rounded-md border border-neutral-200 bg-white px-3 py-2 text-left transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:bg-black dark:hover:bg-neutral-900"
-        >
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-medium text-neutral-900 dark:text-neutral-100">
-              {active?.name ?? 'No workspace'}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-background px-2.5 py-2 text-left transition-colors hover:border-border-strong hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-3 text-muted-foreground">
+              <Building2 className="size-3.5" />
             </span>
-            <span className="block text-[11px] uppercase tracking-wider text-neutral-400">
-              {active?.role ?? '—'}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-medium text-foreground">
+                {active?.name ?? 'No workspace'}
+              </span>
+              <span className="block text-[11px] capitalize text-subtle-foreground">
+                {active?.role ?? '—'}
+              </span>
             </span>
-          </span>
-          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
-        </button>
+            <ChevronsUpDown className="size-3.5 shrink-0 text-subtle-foreground" />
+          </button>
+        </DropdownMenuTrigger>
 
-        {open && (
-          <>
-            {/* Click-away target, so the menu closes without a global listener. */}
-            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-            <div className="absolute left-3 right-3 z-20 mt-1 overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-[#0A0A0A]">
-              {organizations.map((org) => (
-                <button
-                  key={org.id}
-                  onClick={() => switchTo(org.id)}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                >
-                  <span className="min-w-0 flex-1 truncate text-neutral-900 dark:text-neutral-100">
-                    {org.name}
-                  </span>
-                  {org.id === activeOrgId && (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-neutral-900 dark:text-white" />
-                  )}
-                </button>
-              ))}
-
-              <button
-                onClick={() => {
-                  setOpen(false)
-                  setCreating(true)
-                }}
-                className={cn(
-                  'flex w-full items-center gap-2 border-t border-neutral-200 px-3 py-2 text-left text-[13px] text-neutral-600 transition-colors hover:bg-neutral-50',
-                  'dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-900'
-                )}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                New workspace
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+        <DropdownMenuContent align="start" className="w-[224px]">
+          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+          {organizations.map((org) => (
+            <DropdownMenuCheckItem
+              key={org.id}
+              checked={org.id === activeOrgId}
+              onSelect={() => switchTo(org.id)}
+            >
+              {org.name}
+              <span className="ml-1.5 text-[11px] capitalize text-subtle-foreground">{org.role}</span>
+            </DropdownMenuCheckItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setCreating(true)}>
+            <Plus />
+            New workspace
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent className="sm:max-w-[420px]">
@@ -123,21 +115,25 @@ export function WorkspaceSwitcher() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreate} className="space-y-4 pt-2">
-            <Input
-              autoFocus
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Acme Production"
-              maxLength={80}
-            />
-            <button
+          <form onSubmit={handleCreate} className="space-y-4">
+            <Field id="workspace-name" label="Name">
+              <Input
+                id="workspace-name"
+                autoFocus
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Acme Production"
+                maxLength={80}
+              />
+            </Field>
+            <Button
               type="submit"
-              disabled={createOrganization.isPending || !name.trim()}
-              className="h-10 w-full rounded-md bg-black text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
+              className="w-full"
+              loading={createOrganization.isPending}
+              disabled={!name.trim()}
             >
-              {createOrganization.isPending ? 'Creating…' : 'Create workspace'}
-            </button>
+              Create workspace
+            </Button>
           </form>
         </DialogContent>
       </Dialog>

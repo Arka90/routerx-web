@@ -1,10 +1,13 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MailX, UserPlus } from 'lucide-react'
 import { orgApi } from '@/api/org-service'
 import { useAuthStore } from '@/stores/authStore'
 import { getApiErrorMessage } from '@/api/errors'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Logo } from '@/components/ui/logo'
 
 export const Route = createFileRoute('/invites/$token')({
   component: AcceptInvitePage,
@@ -38,70 +41,89 @@ function AcceptInvitePage() {
   })
 
   const invite = data?.invite
+  const wrongAccount = Boolean(
+    sessionToken && email && invite && email.toLowerCase() !== invite.email.toLowerCase()
+  )
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-white px-4 font-sans dark:bg-black">
-      <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-[#0A0A0A]">
-        <div className="mx-auto mb-6 flex h-10 w-10 items-center justify-center bg-black text-xs font-bold uppercase text-white dark:bg-white dark:text-black">
-          RX
-        </div>
+    <div className="grid-dots flex min-h-screen w-full flex-col bg-background">
+      <header className="flex h-16 items-center px-4 sm:px-6">
+        <Link to="/">
+          <Logo />
+        </Link>
+      </header>
 
-        {isLoading ? (
-          <Loader2 className="mx-auto h-5 w-5 animate-spin text-neutral-400" />
-        ) : isError || !invite ? (
-          <>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-              This invitation isn't valid
-            </h1>
-            <p className="mt-2 text-sm text-neutral-500">
-              It may have been revoked, already used, or simply expired. Ask whoever invited
-              you to send a new one.
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-              Join {invite.organization_name}
-            </h1>
-            <p className="mt-2 text-sm text-neutral-500">
-              You've been invited as <strong>{invite.role}</strong>, at{' '}
-              <strong>{invite.email}</strong>.
-            </p>
-
-            {!sessionToken ? (
-              <>
-                <p className="mt-6 text-[13px] text-neutral-500">
-                  Sign in as {invite.email} to accept.
-                </p>
-                <button
-                  onClick={() => {
-                    // Prefill the login form so the right account is used —
-                    // the server refuses an invite accepted by anyone else.
-                    setEmail(invite.email)
-                    navigate({ to: '/auth/login' })
-                  }}
-                  className="mt-4 h-10 w-full rounded-md bg-black text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
-                >
-                  Sign in to accept
-                </button>
-              </>
-            ) : email && email.toLowerCase() !== invite.email.toLowerCase() ? (
-              <p className="mt-6 rounded-md bg-amber-50 px-3 py-3 text-[13px] text-amber-700 dark:bg-amber-900/10 dark:text-amber-500">
-                You're signed in as {email}. This invitation was sent to {invite.email} — sign
-                in as that address to accept it.
+      <main className="flex flex-1 items-center justify-center px-4 pb-16">
+        <div className="card w-full max-w-md animate-rise p-8 text-center">
+          {isLoading ? (
+            <Loader2 className="mx-auto size-5 animate-spin text-subtle-foreground" />
+          ) : isError || !invite ? (
+            <>
+              <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl bg-down-soft text-down">
+                <MailX className="size-5" />
+              </span>
+              <h1 className="text-lg font-semibold tracking-tight">This invitation isn't valid</h1>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                It may have been revoked, already used, or simply expired. Ask whoever invited
+                you to send a new one.
               </p>
-            ) : (
-              <button
-                onClick={() => accept.mutate()}
-                disabled={accept.isPending}
-                className="mt-6 h-10 w-full rounded-md bg-black text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
-              >
-                {accept.isPending ? 'Joining…' : 'Accept invitation'}
-              </button>
-            )}
-          </>
-        )}
-      </div>
+              <Button asChild variant="outline" className="mt-6">
+                <Link to="/">Back to RouteRX</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                <UserPlus className="size-5" />
+              </span>
+              <h1 className="text-lg font-semibold tracking-tight">
+                Join {invite.organization_name}
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                You've been invited as{' '}
+                <Badge variant="brand" size="sm" className="align-middle">
+                  {invite.role}
+                </Badge>{' '}
+                at <span className="font-medium text-foreground">{invite.email}</span>.
+              </p>
+
+              {!sessionToken ? (
+                <>
+                  <p className="mt-6 text-[13px] text-muted-foreground">
+                    Sign in as {invite.email} to accept.
+                  </p>
+                  <Button
+                    variant="primary"
+                    className="mt-3 w-full"
+                    onClick={() => {
+                      // Prefill the login form so the right account is used —
+                      // the server refuses an invite accepted by anyone else.
+                      setEmail(invite.email)
+                      navigate({ to: '/auth/login' })
+                    }}
+                  >
+                    Sign in to accept
+                  </Button>
+                </>
+              ) : wrongAccount ? (
+                <p className="mt-6 rounded-lg border border-degraded/30 bg-degraded-soft px-3 py-3 text-left text-[13px] leading-relaxed text-degraded">
+                  You're signed in as {email}. This invitation was sent to {invite.email} — sign
+                  in as that address to accept it.
+                </p>
+              ) : (
+                <Button
+                  variant="primary"
+                  className="mt-6 w-full"
+                  loading={accept.isPending}
+                  onClick={() => accept.mutate()}
+                >
+                  Accept invitation
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </main>
     </div>
   )
 }

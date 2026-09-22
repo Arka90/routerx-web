@@ -1,9 +1,26 @@
 import { Link } from '@tanstack/react-router'
-import { Lock, PauseCircle } from 'lucide-react'
+import { Globe, Lock, PauseCircle, Timer } from 'lucide-react'
 import { useUptime } from '@/hooks/monitor.queries'
-import { formatUptimePercentage, uptimeWindowLabel } from '@/lib/format'
+import {
+  daysUntil,
+  formatDate,
+  formatInterval,
+  formatUptimePercentage,
+  hostnameOf,
+  uptimeWindowLabel,
+} from '@/lib/format'
 import { presentStatus } from '@/lib/status'
+import { cn } from '@/lib/utils'
+import { Badge, type BadgeVariant } from '@/components/ui/badge'
+import { StatusBadge, StatusDot } from '@/components/ui/status'
 import type { Monitor } from '@/types/monitor.types'
+
+/** Certificate chip colour: red inside a week, amber inside a month. */
+function tlsVariant(days: number): BadgeVariant {
+  if (days < 7) return 'down'
+  if (days < 30) return 'degraded'
+  return 'neutral'
+}
 
 export function MonitorCard({ monitor }: { monitor: Monitor }) {
   const { data: uptimeData } = useUptime(monitor.id)
@@ -12,75 +29,78 @@ export function MonitorCard({ monitor }: { monitor: Monitor }) {
 
   // A monitor stored before URL validation existed can still be unparseable,
   // and an exception here would unmount the entire grid, not just this card.
-  let hostname = monitor.url
-  try {
-    hostname = new URL(monitor.url).hostname
-  } catch {
-    hostname = monitor.url
-  }
+  // hostnameOf falls back to the raw string instead of throwing.
+  const hostname = hostnameOf(monitor.url)
+
+  const tlsDays = daysUntil(monitor.tls_expiry_at)
 
   return (
     <Link
       to="/monitor/$monitorId"
       params={{ monitorId: monitor.id.toString() }}
-      className="group relative flex min-h-[160px] cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 transition-all hover:border-neutral-300 hover:shadow-sm dark:border-neutral-800 dark:bg-[#0A0A0A] dark:hover:border-neutral-700"
-    >
-      {isDown && (
-        <span className="absolute -left-[1px] bottom-0 top-0 w-[2px] rounded-l-md bg-red-500" />
+      className={cn(
+        'card card-hover group flex min-h-[152px] flex-col gap-4 p-5',
+        'focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none',
+        isDown && 'border-down/40'
       )}
-
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h3 className="flex items-center gap-2 truncate text-[14px] font-medium text-neutral-900 dark:text-neutral-100">
-            {!isDown && <span className={`h-2 w-2 shrink-0 rounded-full ${status.dot}`} />}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <StatusDot tone={status.tone} live={status.live} />
             <span className="truncate">{monitor.name ?? hostname}</span>
           </h3>
-          <p className="truncate text-[13px] text-neutral-500">
-            <span className="mr-1.5 font-mono text-[11px] uppercase text-neutral-400">
-              {monitor.method}
-            </span>
+          <p className="mt-1 truncate font-mono text-[12px] text-muted-foreground">
+            <span className="mr-1.5 text-subtle-foreground">{monitor.method}</span>
             {monitor.url}
           </p>
         </div>
 
-        <span
-          className={`shrink-0 rounded-md px-2 py-0.5 text-[12px] font-medium ${status.badge} ${status.text}`}
-        >
-          {status.label}
-        </span>
+        <StatusBadge
+          tone={status.tone}
+          label={status.label}
+          live={status.live}
+          className="shrink-0"
+        />
       </div>
 
       <div className="mt-auto flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-400">
-            {uptimeWindowLabel(uptimeData)}
-          </span>
-          <span className="text-xl font-medium leading-none tracking-tight text-neutral-900 dark:text-neutral-100">
+        <div className="min-w-0">
+          <span className="eyebrow block truncate">{uptimeWindowLabel(uptimeData)}</span>
+          <span className="tabular mt-1 block text-xl leading-none font-semibold tracking-tight text-foreground">
             {uptimeData ? `${formatUptimePercentage(uptimeData)}%` : '…'}
           </span>
         </div>
 
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           {monitor.paused && (
-            <span className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
-              <PauseCircle className="h-3 w-3" />
-              Checks paused
-            </span>
+            <Badge variant="paused" title="Checks are paused">
+              <PauseCircle className="size-3" />
+              Paused
+            </Badge>
           )}
 
-          {monitor.tls_expiry_at && (
-            <span
-              className="flex items-center gap-1.5 rounded border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-medium text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900/50"
-              title="TLS certificate expiry"
+          <Badge variant="neutral" title="Check interval">
+            <Timer className="size-3" />
+            {formatInterval(monitor.interval_seconds)}
+          </Badge>
+
+          {monitor.regions.length > 0 && (
+            <Badge variant="neutral" title="Checked from these regions">
+              <Globe className="size-3" />
+              {monitor.regions.length} {monitor.regions.length === 1 ? 'region' : 'regions'}
+            </Badge>
+          )}
+
+          {tlsDays !== null && (
+            <Badge
+              variant={tlsVariant(tlsDays)}
+              className="tabular"
+              title={`TLS certificate expires ${formatDate(monitor.tls_expiry_at)}`}
             >
-              <Lock className="h-3 w-3" />
-              TLS{' '}
-              {new Date(monitor.tls_expiry_at).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
+              <Lock className="size-3" />
+              {tlsDays < 0 ? 'TLS expired' : `TLS ${tlsDays}d`}
+            </Badge>
           )}
         </div>
       </div>
