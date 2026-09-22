@@ -2,11 +2,15 @@ import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useAllIncidents } from '@/hooks/monitor.queries'
 import { IncidentList } from '@/features/monitor/components/incident-list'
-import { cn } from '@/lib/utils'
+import { Page, PageHeader } from '@/components/ui/page-header'
+import { Segmented } from '@/components/ui/segmented'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/_authenticated/incidents')({
   component: IncidentsPage,
 })
+
+type IncidentFilter = 'all' | 'open'
 
 function IncidentsPage() {
   const [openOnly, setOpenOnly] = useState(false)
@@ -16,52 +20,49 @@ function IncidentsPage() {
   // no incidents.
   const { data, isLoading, isError } = useAllIncidents(openOnly)
 
-  return (
-    <div className="animate-in fade-in space-y-8 p-8 duration-500">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Incidents
-          </h1>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            Every outage across this workspace, newest first.
-          </p>
-        </div>
+  const incidents = data?.incidents ?? []
+  const openCount = incidents.filter((incident) => !incident.resolved_at).length
 
-        <div className="flex shrink-0 rounded-lg border border-neutral-200 p-1 dark:border-neutral-800">
-          {[
-            { label: 'All', value: false },
-            { label: 'Open only', value: true },
-          ].map((option) => (
-            <button
-              key={option.label}
-              onClick={() => setOpenOnly(option.value)}
-              className={cn(
-                'rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors',
-                openOnly === option.value
-                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-black'
-                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100'
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+  return (
+    <Page>
+      <PageHeader
+        title="Incidents"
+        description="Every confirmed outage across this workspace, newest first."
+        actions={
+          <Segmented<IncidentFilter>
+            aria-label="Filter incidents"
+            value={openOnly ? 'open' : 'all'}
+            onChange={(value) => setOpenOnly(value === 'open')}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'open', label: 'Open only' },
+            ]}
+          />
+        }
+      />
 
       {isError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800/20 dark:bg-red-900/10 dark:text-red-400">
+        <div className="card border-down/30 bg-down-soft p-4 text-sm text-down">
           Failed to load incidents. Please check your connection.
         </div>
       ) : isLoading ? (
-        <div className="animate-pulse space-y-4">
-          <div className="h-32 border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
-          <div className="h-32 border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
+        <div className="space-y-4">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
         </div>
       ) : (
-        <>
+        <div className="space-y-4">
+          {incidents.length > 0 && (
+            <p className="text-[13px] text-muted-foreground">
+              <span className="tabular">{incidents.length}</span>{' '}
+              {incidents.length === 1 ? 'incident' : 'incidents'} ·{' '}
+              <span className="tabular">{openCount}</span> open
+            </p>
+          )}
+
           <IncidentList
-            incidents={data?.incidents ?? []}
+            incidents={incidents}
             showMonitor
             emptyTitle={openOnly ? 'Nothing is down' : 'No incidents recorded'}
             emptyHint={
@@ -71,16 +72,16 @@ function IncidentsPage() {
             }
           />
 
-          {!isLoading && (data?.incidents.length ?? 0) === 0 && !openOnly && (
-            <p className="text-center text-sm text-neutral-500">
-              <Link to="/dashboard" className="font-medium underline">
+          {incidents.length === 0 && !openOnly && (
+            <p className="text-center text-sm text-muted-foreground">
+              <Link to="/dashboard" className="link font-medium">
                 Go to the dashboard
               </Link>{' '}
               to add a monitor.
             </p>
           )}
-        </>
+        </div>
       )}
-    </div>
+    </Page>
   )
 }

@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import { ChevronDown, Plus, X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { useRegions } from '@/hooks/status.queries'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { CheckboxField } from '@/components/ui/checkbox'
+import { Field, FormError } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import type {
   AssertionType,
   CreateMonitorPayload,
@@ -39,17 +45,6 @@ const ASSERTIONS: Array<{ value: AssertionType; label: string; hint: string }> =
     hint: 'e.g. status=ok, or data.items[0].state=ready',
   },
 ]
-
-const fieldClass =
-  'h-10 rounded-md border-neutral-200 bg-white text-sm shadow-sm transition-all focus-visible:border-black focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:focus-visible:border-white dark:focus-visible:ring-white'
-
-const selectClass =
-  'flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-900 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100 dark:focus-visible:ring-white'
-
-const labelClass =
-  'text-sm font-medium leading-none text-neutral-900 dark:text-neutral-100'
-
-const hintClass = 'text-[12px] text-neutral-500 dark:text-neutral-400'
 
 export interface MonitorFormValues extends CreateMonitorPayload {
   url: string
@@ -148,88 +143,75 @@ export function MonitorForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="space-y-2">
-        <label htmlFor="url" className={labelClass}>
-          Endpoint URL
-        </label>
+      <Field id="url" label="Endpoint URL">
         <Input
           id="url"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://example.com/health"
-          className={fieldClass}
+          className="font-mono text-[13px]"
+          autoComplete="off"
+          spellCheck={false}
         />
-      </div>
+      </Field>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="name" className={labelClass}>
-            Name <span className="font-normal text-neutral-400">(optional)</span>
-          </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field id="name" label="Name" optional>
           <Input
             id="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Checkout API"
-            className={fieldClass}
           />
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <label htmlFor="interval" className={labelClass}>
-            Check interval
-          </label>
-          <select
+        <Field id="interval" label="Check interval">
+          <Select
             id="interval"
             value={interval}
             onChange={(event) => setInterval(event.target.value)}
-            className={selectClass}
           >
             {INTERVALS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
       </div>
 
       <button
         type="button"
         onClick={() => setShowAdvanced((value) => !value)}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+        aria-expanded={showAdvanced}
+        className="flex items-center gap-1.5 rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronDown
-          className={cn('h-3.5 w-3.5 transition-transform', showAdvanced && 'rotate-180')}
+          className={cn('size-3.5 transition-transform duration-200', showAdvanced && 'rotate-180')}
+          aria-hidden
         />
         Request and assertions
       </button>
 
       {showAdvanced && (
-        <div className="space-y-5 border-l-2 border-neutral-100 pl-4 dark:border-neutral-800">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="method" className={labelClass}>
-                Method
-              </label>
-              <select
+        <div className="space-y-5 rounded-lg border border-border bg-surface-2/60 p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="method" label="Method">
+              <Select
                 id="method"
                 value={method}
                 onChange={(event) => setMethod(event.target.value as HttpMethod)}
-                className={selectClass}
+                className="font-mono text-[13px]"
               >
                 {METHODS.map((item) => (
                   <option key={item} value={item}>
                     {item}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
 
-            <div className="space-y-2">
-              <label htmlFor="timeout" className={labelClass}>
-                Timeout (ms)
-              </label>
+            <Field id="timeout" label="Timeout (ms)">
               <Input
                 id="timeout"
                 type="number"
@@ -238,58 +220,53 @@ export function MonitorForm({
                 step={500}
                 value={timeout}
                 onChange={(event) => setTimeoutMs(event.target.value)}
-                className={fieldClass}
+                className="tabular"
               />
-            </div>
+            </Field>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="codes" className={labelClass}>
-              Expected status codes
-            </label>
+          <Field
+            id="codes"
+            label="Expected status codes"
+            hint="Leave empty to accept any 2xx or 3xx. A 404 counts as down unless you list it here."
+          >
             <Input
               id="codes"
               value={expectedCodes}
               onChange={(event) => setExpectedCodes(event.target.value)}
               placeholder="200, 204"
-              className={fieldClass}
+              className="font-mono text-[13px]"
             />
-            <p className={hintClass}>
-              Leave empty to accept any 2xx or 3xx. A 404 counts as down unless you list it
-              here.
-            </p>
-          </div>
+          </Field>
 
-          <div className="space-y-2">
-            <label htmlFor="assertion" className={labelClass}>
-              Body assertion
-            </label>
-            <select
+          <Field id="assertion" label="Body assertion" hint={assertion.hint}>
+            <Select
               id="assertion"
               value={assertionType}
               onChange={(event) => setAssertionType(event.target.value as AssertionType)}
-              className={selectClass}
             >
               {ASSERTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
-            <p className={hintClass}>{assertion.hint}</p>
+            </Select>
 
             {assertionType !== 'none' && (
               <Input
                 value={assertionValue}
                 onChange={(event) => setAssertionValue(event.target.value)}
                 placeholder={assertionType === 'json_path' ? 'status=ok' : 'healthy'}
-                className={cn(fieldClass, 'mt-2 font-mono text-[13px]')}
+                aria-label="Assertion value"
+                className="font-mono text-[13px]"
               />
             )}
-          </div>
+          </Field>
 
           <div className="space-y-2">
-            <span className={labelClass}>Request headers</span>
+            <Label asChild>
+              <span>Request headers</span>
+            </Label>
 
             {headers.map((row, index) => (
               <div key={index} className="flex gap-2">
@@ -301,7 +278,8 @@ export function MonitorForm({
                     setHeaders(next)
                   }}
                   placeholder="Authorization"
-                  className={cn(fieldClass, 'flex-1 font-mono text-[13px]')}
+                  aria-label={`Header ${index + 1} name`}
+                  className="flex-1 font-mono text-[13px]"
                 />
                 <Input
                   value={row.value}
@@ -311,50 +289,55 @@ export function MonitorForm({
                     setHeaders(next)
                   }}
                   placeholder="Bearer …"
-                  className={cn(fieldClass, 'flex-1 font-mono text-[13px]')}
+                  aria-label={`Header ${index + 1} value`}
+                  className="flex-1 font-mono text-[13px]"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={`Remove header ${row.key || index + 1}`}
                   onClick={() => setHeaders(headers.filter((_, i) => i !== index))}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-neutral-200 text-neutral-400 transition-colors hover:text-red-600 dark:border-neutral-800"
+                  className="h-9 hover:text-down"
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                  <X className="size-3.5" />
+                </Button>
               </div>
             ))}
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setHeaders([...headers, { key: '', value: '' }])}
-              className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+              className="-ml-2"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="size-3.5" />
               Add header
-            </button>
+            </Button>
           </div>
 
           {methodTakesBody && (
-            <div className="space-y-2">
-              <label htmlFor="body" className={labelClass}>
-                Request body
-              </label>
-              <textarea
+            <Field id="body" label="Request body">
+              <Textarea
                 id="body"
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
                 rows={4}
                 placeholder='{"ping": true}'
-                className="w-full rounded-md border border-neutral-200 bg-white p-3 font-mono text-[13px] shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100 dark:focus-visible:ring-white"
+                className="font-mono text-[13px]"
+                spellCheck={false}
               />
-            </div>
+            </Field>
           )}
 
           {availableRegions.length > 1 && (
             <div className="space-y-2">
-              <span className={labelClass}>Check from</span>
+              <Label asChild>
+                <span>Check from</span>
+              </Label>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Regions">
                 {availableRegions.map((region) => {
                   const selected = regions.includes(region.code)
 
@@ -362,6 +345,7 @@ export function MonitorForm({
                     <button
                       key={region.code}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() =>
                         setRegions(
                           selected
@@ -372,8 +356,8 @@ export function MonitorForm({
                       className={cn(
                         'rounded-md border px-3 py-1.5 text-[12px] font-medium transition-colors',
                         selected
-                          ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-black'
-                          : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-900'
+                          ? 'border-brand bg-brand-soft text-brand'
+                          : 'border-border text-muted-foreground hover:bg-accent'
                       )}
                     >
                       {region.name}
@@ -382,7 +366,7 @@ export function MonitorForm({
                 })}
               </div>
 
-              <p className={hintClass}>
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 {regions.length === 0
                   ? 'Every region, including any added later.'
                   : `${regions.length} of ${availableRegions.length} regions. Set how many must agree before alerting in the Alerts tab.`}
@@ -390,47 +374,30 @@ export function MonitorForm({
             </div>
           )}
 
-          <label className="flex items-center gap-2.5">
-            <input
-              type="checkbox"
-              checked={followRedirects}
-              onChange={(event) => setFollowRedirects(event.target.checked)}
-              className="h-4 w-4 accent-black dark:accent-white"
-            />
-            <span className="text-[13px] text-neutral-700 dark:text-neutral-300">
-              Follow redirects
-            </span>
-          </label>
+          <CheckboxField
+            id="follow_redirects"
+            label="Follow redirects"
+            checked={followRedirects}
+            onCheckedChange={(checked) => setFollowRedirects(checked === true)}
+          />
 
           {initial && (
-            <label className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                checked={paused}
-                onChange={(event) => setPaused(event.target.checked)}
-                className="h-4 w-4 accent-black dark:accent-white"
-              />
-              <span className="text-[13px] text-neutral-700 dark:text-neutral-300">
-                Pause this monitor
-              </span>
-            </label>
+            <CheckboxField
+              id="paused"
+              label="Pause this monitor"
+              hint="No checks run and no alerts fire until it is resumed."
+              checked={paused}
+              onCheckedChange={(checked) => setPaused(checked === true)}
+            />
           )}
         </div>
       )}
 
-      {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-600 dark:bg-red-500/10 dark:text-red-400">
-          {error}
-        </p>
-      )}
+      <FormError>{error}</FormError>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="h-10 w-full rounded-md bg-black px-4 text-sm font-medium text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
-      >
-        {pending ? 'Saving…' : submitLabel}
-      </button>
+      <Button type="submit" variant="primary" loading={pending} className="w-full">
+        {submitLabel}
+      </Button>
     </form>
   )
 }

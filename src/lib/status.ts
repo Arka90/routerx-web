@@ -1,71 +1,68 @@
 import type { Monitor, MonitorStatus } from '@/types/monitor.types'
+import type { PublicComponentStatus } from '@/types/status.types'
+import type { StatusTone } from '@/components/ui/status'
 
 export interface StatusPresentation {
   label: string
-  /** Tailwind text colour class. */
-  text: string
-  /** Tailwind background class for the badge. */
-  badge: string
-  /** Tailwind background class for the dot. */
-  dot: string
+  tone: StatusTone
+  /** True when the state is happening right now and deserves a pulse. */
+  live: boolean
 }
 
 const PRESENTATION: Record<MonitorStatus | 'PAUSED', StatusPresentation> = {
-  UP: {
-    label: 'Operational',
-    text: 'text-emerald-700 dark:text-emerald-500',
-    badge: 'bg-emerald-50 dark:bg-emerald-500/10',
-    dot: 'bg-emerald-500',
-  },
-  DOWN: {
-    label: 'Outage',
-    text: 'text-red-600 dark:text-red-500',
-    badge: 'bg-red-50 dark:bg-red-500/10',
-    dot: 'bg-red-500',
-  },
-  DEGRADED: {
-    label: 'Degraded',
-    text: 'text-amber-600 dark:text-amber-500',
-    badge: 'bg-amber-50 dark:bg-amber-500/10',
-    dot: 'bg-amber-500',
-  },
-  MAINTENANCE: {
-    label: 'Maintenance',
-    text: 'text-sky-600 dark:text-sky-400',
-    badge: 'bg-sky-50 dark:bg-sky-500/10',
-    dot: 'bg-sky-500',
-  },
-  UNCONFIRMED: {
-    label: 'Pending',
-    text: 'text-neutral-500',
-    badge: 'bg-neutral-100 dark:bg-neutral-900',
-    dot: 'bg-neutral-300 dark:bg-neutral-600',
-  },
-  PAUSED: {
-    label: 'Paused',
-    text: 'text-neutral-500',
-    badge: 'bg-neutral-100 dark:bg-neutral-900',
-    dot: 'bg-neutral-300 dark:bg-neutral-600',
-  },
+  UP: { label: 'Operational', tone: 'up', live: false },
+  DOWN: { label: 'Outage', tone: 'down', live: true },
+  DEGRADED: { label: 'Degraded', tone: 'degraded', live: true },
+  MAINTENANCE: { label: 'Maintenance', tone: 'maintenance', live: false },
+  UNCONFIRMED: { label: 'Pending', tone: 'unknown', live: false },
+  PAUSED: { label: 'Paused', tone: 'paused', live: false },
 }
 
 /**
  * Paused and in-maintenance both override the last observed status: showing
  * "Outage" for something deliberately switched off is alarming and wrong.
  */
-export function presentStatus(monitor: Monitor): StatusPresentation {
+export function presentStatus(monitor: Pick<Monitor, 'paused' | 'in_maintenance' | 'confirmed_status'>): StatusPresentation {
   if (monitor.paused) return PRESENTATION.PAUSED
   if (monitor.in_maintenance) return PRESENTATION.MAINTENANCE
   return PRESENTATION[monitor.confirmed_status] ?? PRESENTATION.UNCONFIRMED
 }
 
-/** Turns HTTP_5XX into "Http 5xx" for display. */
+export const PUBLIC_STATUS: Record<PublicComponentStatus, StatusPresentation> = {
+  operational: { label: 'Operational', tone: 'up', live: false },
+  degraded: { label: 'Degraded performance', tone: 'degraded', live: true },
+  outage: { label: 'Outage', tone: 'down', live: true },
+  maintenance: { label: 'Under maintenance', tone: 'maintenance', live: false },
+  unknown: { label: 'Not monitored', tone: 'paused', live: false },
+}
+
+/** Turns HTTP_5XX into "HTTP 5xx", TLS_HANDSHAKE_FAILED into "TLS handshake failed". */
 export function humanizeRootCause(rootCause: string | null): string | null {
   if (!rootCause) return null
 
-  const words = rootCause.toLowerCase().split('_')
+  const ACRONYMS = new Set(['dns', 'tcp', 'tls', 'http', 'ssl'])
 
-  return words
-    .map((word, index) => (index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+  return rootCause
+    .toLowerCase()
+    .split('_')
+    .map((word, index) => {
+      if (ACRONYMS.has(word)) return word.toUpperCase()
+      if (/^\dxx$/.test(word)) return word
+      return index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word
+    })
     .join(' ')
+}
+
+/** Short explanation of each classifier outcome, for tooltips and legends. */
+export const ROOT_CAUSE_HELP: Record<string, string> = {
+  DNS_FAILURE: 'The hostname did not resolve.',
+  TCP_CONNECTION_FAILED: 'Nothing accepted the connection on that port.',
+  TLS_HANDSHAKE_FAILED: 'The certificate was rejected or the handshake failed.',
+  HTTP_5XX: 'The server answered with a 5xx status.',
+  HTTP_4XX: 'The server answered with a 4xx status.',
+  ASSERTION_FAILED: 'The status was fine but the body assertion did not match.',
+  SLOW_RESPONSE: 'It responded, but above the slow threshold.',
+  TIMEOUT: 'No response before the monitor timeout.',
+  REDIRECT_LOOP: 'Still redirecting after five hops.',
+  BLOCKED_TARGET: 'Resolved to a private or reserved address and was refused.',
 }

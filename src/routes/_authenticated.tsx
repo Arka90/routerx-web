@@ -1,9 +1,11 @@
 import { createFileRoute, redirect, Outlet } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { Loader2, WifiOff } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/api/auth-service'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Loader2 } from 'lucide-react'
+import { AppShell } from '@/components/layout/app-shell'
+import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/ui/logo'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: () => {
@@ -36,8 +38,9 @@ function AuthenticatedLayout() {
 
   if (isLoading && organizations.length === 0) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-white dark:bg-black">
-        <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
+      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 bg-background">
+        <Logo size="lg" />
+        <Loader2 className="size-4 animate-spin text-subtle-foreground" />
       </div>
     )
   }
@@ -46,31 +49,26 @@ function AuthenticatedLayout() {
   // here means the API is unreachable, which is worth saying out loud.
   if (isError && organizations.length === 0) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-3 bg-white px-6 text-center dark:bg-black">
-        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-          Can't reach the RouteRX API
-        </p>
-        <p className="text-sm text-neutral-500">
-          Your session is still valid. Check your connection and reload.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-2 rounded-md bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white dark:bg-white dark:text-black"
-        >
-          Reload
-        </button>
+      <div className="grid-dots flex min-h-screen w-full flex-col items-center justify-center bg-background px-6">
+        <div className="card flex w-full max-w-sm flex-col items-center p-8 text-center">
+          <span className="mb-4 flex size-11 items-center justify-center rounded-xl bg-down-soft text-down">
+            <WifiOff className="size-5" />
+          </span>
+          <h1 className="text-base font-semibold text-foreground">Can't reach the RouteRX API</h1>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+            Your session is still valid. Check your connection and reload.
+          </p>
+          <Button className="mt-6 w-full" onClick={() => window.location.reload()}>
+            Reload
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen w-full overflow-hidden bg-white font-sans selection:bg-neutral-200 selection:text-black dark:bg-black dark:selection:bg-neutral-800 dark:selection:text-white">
-      <Sidebar />
-      <div className="flex h-screen flex-1 flex-col overflow-hidden">
-        <main className="w-full flex-1 overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <AppShell>
+      <Outlet />
+    </AppShell>
   )
 }

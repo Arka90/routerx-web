@@ -12,7 +12,14 @@ import {
 } from '@/hooks/org.queries'
 import { useActiveRole, useAuthStore, useCanManage } from '@/stores/authStore'
 import { getApiErrorMessage } from '@/api/errors'
+import { formatDate } from '@/lib/format'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
+import { Page, PageHeader, SectionHeader } from '@/components/ui/page-header'
+import { Select } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { OrgRole } from '@/types/org.types'
 
 export const Route = createFileRoute('/_authenticated/team')({
@@ -24,9 +31,6 @@ const ROLE_HELP: Record<OrgRole, string> = {
   admin: 'Manage monitors, channels and teammates.',
   member: 'Read-only, but can acknowledge incidents.',
 }
-
-const selectClass =
-  'h-8 rounded-md border border-neutral-200 bg-white px-2 text-[13px] text-neutral-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100'
 
 function TeamPage() {
   const canManage = useCanManage()
@@ -43,6 +47,7 @@ function TeamPage() {
   const revokeInvite = useRevokeInvite()
   const updateRole = useUpdateMemberRole()
   const removeMember = useRemoveMember()
+  const { confirm, dialog } = useConfirm()
 
   const members = memberData?.members ?? []
   const invites = inviteData?.invites ?? []
@@ -69,163 +74,192 @@ function TeamPage() {
   }
 
   return (
-    <div className="animate-in fade-in max-w-4xl space-y-10 p-8 duration-500">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-          Team
-        </h1>
-        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-          Who can see and change monitoring for this workspace.
-        </p>
-      </div>
+    <Page width="narrow">
+      <PageHeader
+        title="Team"
+        description="Who can see and change monitoring for this workspace."
+      />
 
       {canManage && (
-        <section className="space-y-3 rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            Invite a teammate
-          </h2>
+        <section className="card space-y-4 p-5">
+          <SectionHeader title="Invite a teammate" />
 
           <form onSubmit={handleInvite} className="flex flex-col gap-3 sm:flex-row">
             <Input
               type="email"
+              aria-label="Email address"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="teammate@example.com"
               className="flex-1"
             />
-            <select
+            <Select
+              aria-label="Role"
               value={inviteRole}
               onChange={(event) => setInviteRole(event.target.value as OrgRole)}
-              className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100"
+              className="capitalize sm:w-36"
             >
               {assignableRoles.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
               ))}
-            </select>
-            <button
+            </Select>
+            <Button
               type="submit"
-              disabled={createInvite.isPending || !email.trim()}
-              className="h-10 rounded-md bg-black px-5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
+              variant="primary"
+              loading={createInvite.isPending}
+              disabled={!email.trim()}
             >
-              {createInvite.isPending ? 'Sending…' : 'Invite'}
-            </button>
+              Send invite
+            </Button>
           </form>
 
-          <p className="text-[12px] text-neutral-500">{ROLE_HELP[inviteRole]}</p>
+          <p className="text-xs text-muted-foreground">{ROLE_HELP[inviteRole]}</p>
         </section>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-          Members
-        </h2>
+        <SectionHeader
+          title="Members"
+          description={
+            isLoading
+              ? undefined
+              : `${members.length} ${members.length === 1 ? 'person' : 'people'} in this workspace`
+          }
+        />
 
         {isLoading ? (
-          <div className="h-24 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-900" />
+          <div className="space-y-3">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
         ) : (
-          <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-            {members.map((member) => (
-              <div
-                key={member.user_id}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                    {member.email}
-                    {member.user_id === currentUserId && (
-                      <span className="ml-2 text-[11px] font-normal text-neutral-400">you</span>
-                    )}
-                  </p>
-                  <p className="text-[12px] text-neutral-500">
-                    Joined {new Date(member.joined_at).toLocaleDateString()}
-                  </p>
-                </div>
+          <div className="card divide-y divide-border">
+            {members.map((member) => {
+              const self = member.user_id === currentUserId
 
-                <div className="flex shrink-0 items-center gap-2">
-                  {canManage ? (
-                    <select
-                      value={member.role}
-                      onChange={(event) =>
-                        updateRole.mutate(
-                          { userId: member.user_id, role: event.target.value as OrgRole },
-                          {
-                            onSuccess: () => toast.success('Role updated'),
-                            onError: (error) =>
-                              toast.error(getApiErrorMessage(error, 'Could not change role')),
-                          }
-                        )
-                      }
-                      className={selectClass}
-                    >
-                      {assignableRoles.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                      {/* An owner viewed by an admin is not in assignableRoles. */}
-                      {!assignableRoles.includes(member.role) && (
-                        <option value={member.role}>{member.role}</option>
+              return (
+                <div key={member.user_id} className="flex items-center gap-3 px-4 py-3">
+                  <span
+                    aria-hidden
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold uppercase text-brand"
+                  >
+                    {member.email.charAt(0)}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {member.email}
+                      </span>
+                      {self && (
+                        <Badge variant="brand" size="sm">
+                          you
+                        </Badge>
                       )}
-                    </select>
-                  ) : (
-                    <span className="text-[12px] uppercase tracking-wider text-neutral-400">
-                      {member.role}
-                    </span>
-                  )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Joined {formatDate(member.joined_at)}
+                    </p>
+                  </div>
 
-                  {canManage && (
-                    <button
-                      aria-label={`Remove ${member.email}`}
-                      onClick={() => {
-                        const self = member.user_id === currentUserId
-                        const message = self
-                          ? 'Leave this workspace?'
-                          : `Remove ${member.email} from this workspace?`
+                  <div className="flex shrink-0 items-center gap-2">
+                    {canManage ? (
+                      <Select
+                        aria-label={`Role for ${member.email}`}
+                        value={member.role}
+                        onChange={(event) =>
+                          updateRole.mutate(
+                            { userId: member.user_id, role: event.target.value as OrgRole },
+                            {
+                              onSuccess: () => toast.success('Role updated'),
+                              onError: (error) =>
+                                toast.error(getApiErrorMessage(error, 'Could not change role')),
+                            }
+                          )
+                        }
+                        className="h-8 w-32 text-[13px] capitalize"
+                      >
+                        {assignableRoles.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                        {/* An owner viewed by an admin is not in assignableRoles. */}
+                        {!assignableRoles.includes(member.role) && (
+                          <option value={member.role}>{member.role}</option>
+                        )}
+                      </Select>
+                    ) : (
+                      <Badge size="sm">{member.role}</Badge>
+                    )}
 
-                        if (!confirm(message)) return
+                    {canManage && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={self ? 'Leave this workspace' : `Remove ${member.email}`}
+                        className="hover:bg-down-soft hover:text-down"
+                        onClick={() => {
+                          const message = self
+                            ? 'Leave this workspace?'
+                            : `Remove ${member.email} from this workspace?`
 
-                        removeMember.mutate(member.user_id, {
-                          onSuccess: () => {
-                            toast.success(self ? 'You left the workspace' : 'Member removed')
-                            if (self) window.location.href = '/dashboard'
-                          },
-                          onError: (error) =>
-                            toast.error(getApiErrorMessage(error, 'Could not remove')),
-                        })
-                      }}
-                      className="rounded-md border border-neutral-200 p-1.5 text-neutral-400 transition-colors hover:text-red-600 dark:border-neutral-800"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                          confirm({
+                            title: message,
+                            description: self
+                              ? 'You lose access immediately and need a new invitation to come back.'
+                              : 'They lose access immediately and need a new invitation to come back.',
+                            confirmLabel: self ? 'Leave workspace' : 'Remove member',
+                            destructive: true,
+                            onConfirm: () =>
+                              removeMember.mutate(member.user_id, {
+                                onSuccess: () => {
+                                  toast.success(self ? 'You left the workspace' : 'Member removed')
+                                  if (self) window.location.href = '/dashboard'
+                                },
+                                onError: (error) =>
+                                  toast.error(getApiErrorMessage(error, 'Could not remove')),
+                              }),
+                          })
+                        }}
+                      >
+                        <Trash2 />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
 
       {canManage && invites.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            Pending invitations
-          </h2>
+          <SectionHeader
+            title="Pending invitations"
+            description="Sent but not yet accepted. Revoking one makes its link stop working."
+          />
 
-          <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+          <div className="card divide-y divide-border">
             {invites.map((invite) => (
-              <div key={invite.id} className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-neutral-900 dark:text-neutral-100">
-                    {invite.email}
-                  </p>
-                  <p className="text-[12px] text-neutral-500">
-                    {invite.role} · expires {new Date(invite.expires_at).toLocaleDateString()}
+              <div key={invite.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm text-foreground">{invite.email}</span>
+                    <Badge size="sm">{invite.role}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Expires {formatDate(invite.expires_at)}
                   </p>
                 </div>
 
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={revokeInvite.isPending && revokeInvite.variables === invite.id}
                   onClick={() =>
                     revokeInvite.mutate(invite.id, {
                       onSuccess: () => toast.success('Invitation revoked'),
@@ -233,15 +267,16 @@ function TeamPage() {
                         toast.error(getApiErrorMessage(error, 'Could not revoke')),
                     })
                   }
-                  className="shrink-0 rounded-md border border-neutral-200 px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
                 >
                   Revoke
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         </section>
       )}
-    </div>
+
+      {dialog}
+    </Page>
   )
 }

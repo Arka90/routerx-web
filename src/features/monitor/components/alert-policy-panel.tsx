@@ -6,14 +6,14 @@ import { useChannels } from '@/hooks/org.queries'
 import { useRegions } from '@/hooks/status.queries'
 import { getApiErrorMessage } from '@/api/errors'
 import { useCanManage } from '@/stores/authStore'
+import { formatRelative } from '@/lib/format'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { CheckboxField } from '@/components/ui/checkbox'
+import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import type { MonitorDetail } from '@/types/monitor.types'
-
-const selectClass =
-  'flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm text-neutral-900 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100 dark:focus-visible:ring-white'
-
-const labelClass = 'text-sm font-medium text-neutral-900 dark:text-neutral-100'
-const hintClass = 'text-[12px] text-neutral-500 dark:text-neutral-400'
 
 const MUTE_OPTIONS = [
   { label: 'Not muted', hours: 0 },
@@ -88,23 +88,24 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
     )
   }
 
+  const deliveries = deliveryData?.deliveries ?? []
+
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <form onSubmit={handleSave} className="card space-y-5 p-5">
         <div>
-          <h3 className="text-lg font-medium tracking-tight text-neutral-900 dark:text-neutral-100">
-            Alert policy
-          </h3>
-          <p className="mt-1 text-sm text-neutral-500">
+          <h3 className="text-sm font-semibold tracking-tight text-foreground">Alert policy</h3>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             How many failed checks it takes to page someone, and who hears about it.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label htmlFor="failure" className={labelClass}>
-              Failures before alerting
-            </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            id="failure"
+            label="Failures before alerting"
+            hint="Higher values ride out a single blip."
+          >
             <Input
               id="failure"
               type="number"
@@ -113,14 +114,15 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
               value={failureThreshold}
               onChange={(event) => setFailureThreshold(event.target.value)}
               disabled={!canManage}
+              className="tabular"
             />
-            <p className={hintClass}>Higher values ride out a single blip.</p>
-          </div>
+          </Field>
 
-          <div className="space-y-2">
-            <label htmlFor="recovery" className={labelClass}>
-              Successes before recovering
-            </label>
+          <Field
+            id="recovery"
+            label="Successes before recovering"
+            hint="Stops a flapping service spamming you."
+          >
             <Input
               id="recovery"
               type="number"
@@ -129,33 +131,23 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
               value={recoveryThreshold}
               onChange={(event) => setRecoveryThreshold(event.target.value)}
               disabled={!canManage}
+              className="tabular"
             />
-            <p className={hintClass}>Stops a flapping service spamming you.</p>
-          </div>
+          </Field>
         </div>
 
-        <div className="space-y-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-          <label className="flex items-center gap-2.5">
-            <input
-              type="checkbox"
-              checked={alertOnSlow}
-              onChange={(event) => setAlertOnSlow(event.target.checked)}
-              disabled={!canManage}
-              className="h-4 w-4 accent-black dark:accent-white"
-            />
-            <span className={labelClass}>Alert when the site is slow but alive</span>
-          </label>
-
-          <p className={hintClass}>
-            A monitor that keeps responding above the threshold is marked degraded and opens
-            an incident.
-          </p>
+        <div className="space-y-4 rounded-lg border border-border bg-surface-2/60 p-4">
+          <CheckboxField
+            id="alert_on_slow"
+            label="Alert when the site is slow but alive"
+            hint="A monitor that keeps responding above the threshold is marked degraded and opens an incident."
+            checked={alertOnSlow}
+            onCheckedChange={(checked) => setAlertOnSlow(checked === true)}
+            disabled={!canManage}
+          />
 
           {alertOnSlow && (
-            <div className="space-y-2 pt-1">
-              <label htmlFor="slow" className={hintClass}>
-                Slow threshold (ms)
-              </label>
+            <Field id="slow" label="Slow threshold (ms)">
               <Input
                 id="slow"
                 type="number"
@@ -165,42 +157,38 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
                 value={slowThreshold}
                 onChange={(event) => setSlowThreshold(event.target.value)}
                 disabled={!canManage}
+                className="tabular"
               />
-            </div>
+            </Field>
           )}
         </div>
 
         {regionCount > 1 && (
-          <div className="space-y-2">
-            <label htmlFor="confirmations" className={labelClass}>
-              Regions that must agree
-            </label>
-            <select
+          <Field
+            id="confirmations"
+            label="Regions that must agree"
+            hint="One vantage point can't tell a site being down from the path to it being down. Requiring two means a routing problem doesn't page anyone — the failing region is still shown on the monitor. Recovery always needs every region to be healthy."
+          >
+            <Select
               id="confirmations"
               value={confirmations}
               onChange={(event) => setConfirmations(event.target.value)}
               disabled={!canManage}
-              className={selectClass}
             >
               {Array.from({ length: regionCount }).map((_, index) => (
                 <option key={index + 1} value={index + 1}>
                   {index + 1} of {regionCount}
                 </option>
               ))}
-            </select>
-            <p className={hintClass}>
-              One vantage point can't tell a site being down from the path to it being
-              down. Requiring two means a routing problem doesn't page anyone — the
-              failing region is still shown on the monitor. Recovery always needs every
-              region to be healthy.
-            </p>
-          </div>
+            </Select>
+          </Field>
         )}
 
-        <div className="space-y-2">
-          <label htmlFor="renotify" className={labelClass}>
-            Remind me every
-          </label>
+        <Field
+          id="renotify"
+          label="Remind me every"
+          hint="Minutes between reminders while an incident is still open. Leave empty to be told once. Reminders stop as soon as someone acknowledges."
+        >
           <Input
             id="renotify"
             type="number"
@@ -210,133 +198,131 @@ export function AlertPolicyPanel({ monitor }: { monitor: MonitorDetail }) {
             value={renotify}
             onChange={(event) => setRenotify(event.target.value)}
             disabled={!canManage}
+            className="tabular"
           />
-          <p className={hintClass}>
-            Minutes between reminders while an incident is still open. Leave empty to be told
-            once. Reminders stop as soon as someone acknowledges.
-          </p>
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <label htmlFor="mute" className={labelClass}>
-            Mute
-          </label>
-          <select
+        <Field
+          id="mute"
+          label="Mute"
+          hint={
+            currentlyMuted
+              ? `Muted until ${mutedUntil!.toLocaleString()}. Incidents are still recorded.`
+              : 'Muting stops notifications. Incidents are still recorded either way.'
+          }
+        >
+          <Select
             id="mute"
             value={muteHours}
             onChange={(event) => setMuteHours(event.target.value)}
             disabled={!canManage}
-            className={selectClass}
           >
             {MUTE_OPTIONS.map((option) => (
               <option key={option.hours} value={option.hours}>
                 {option.label}
               </option>
             ))}
-          </select>
-          <p className={hintClass}>
-            {currentlyMuted
-              ? `Muted until ${mutedUntil!.toLocaleString()}. Incidents are still recorded.`
-              : 'Muting stops notifications. Incidents are still recorded either way.'}
-          </p>
-        </div>
+          </Select>
+        </Field>
 
         {canManage && (
-          <button
-            type="submit"
-            disabled={updatePolicy.isPending}
-            className="h-10 rounded-md bg-black px-5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
-          >
-            {updatePolicy.isPending ? 'Saving…' : 'Save policy'}
-          </button>
+          <div className="pt-1">
+            <Button type="submit" variant="primary" loading={updatePolicy.isPending}>
+              Save policy
+            </Button>
+          </div>
         )}
       </form>
 
-      <div className="space-y-8">
-        <div className="space-y-3">
-          <h4 className={labelClass}>Notify these channels</h4>
+      <div className="space-y-6">
+        <section className="card space-y-4 p-5">
+          <h3 className="text-sm font-semibold tracking-tight text-foreground">
+            Notify these channels
+          </h3>
 
           {channels.length === 0 ? (
-            <p className={hintClass}>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
               No channels yet.{' '}
-              <Link to="/channels" className="underline">
+              <Link to="/channels" className="link">
                 Add one
               </Link>{' '}
               to get Slack or webhook alerts.
             </p>
           ) : (
             <>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {channels.map((channel) => (
-                  <label key={channel.id} className="flex items-center gap-2.5">
-                    <input
-                      type="checkbox"
-                      disabled={!canManage}
-                      checked={selectedChannels.includes(channel.id)}
-                      onChange={(event) =>
-                        setSelectedChannels(
-                          event.target.checked
-                            ? [...selectedChannels, channel.id]
-                            : selectedChannels.filter((id) => id !== channel.id)
-                        )
-                      }
-                      className="h-4 w-4 accent-black dark:accent-white"
-                    />
-                    <span className="text-[13px] text-neutral-700 dark:text-neutral-300">
-                      {channel.name}
-                      <span className="ml-1.5 text-[11px] uppercase text-neutral-400">
-                        {channel.type}
+                  <CheckboxField
+                    key={channel.id}
+                    id={`channel-${channel.id}`}
+                    label={
+                      <span className="flex items-center gap-2">
+                        <span className="truncate">{channel.name}</span>
+                        <Badge size="sm">{channel.type}</Badge>
                       </span>
-                    </span>
-                  </label>
+                    }
+                    disabled={!canManage}
+                    checked={selectedChannels.includes(channel.id)}
+                    onCheckedChange={(checked) =>
+                      setSelectedChannels(
+                        checked === true
+                          ? [...selectedChannels, channel.id]
+                          : selectedChannels.filter((id) => id !== channel.id)
+                      )
+                    }
+                    className="items-center"
+                  />
                 ))}
               </div>
 
-              <p className={hintClass}>
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 {selectedChannels.length === 0
                   ? 'With none selected, every enabled channel in the workspace is used.'
                   : 'Only the selected channels are notified for this monitor.'}
               </p>
             </>
           )}
-        </div>
+        </section>
 
-        <div className="space-y-3">
-          <h4 className={labelClass}>Recent deliveries</h4>
+        <section className="card">
+          <div className="border-b border-border px-5 py-4">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              Recent deliveries
+            </h3>
+          </div>
 
-          {!deliveryData?.deliveries.length ? (
-            <p className={hintClass}>Nothing sent yet.</p>
+          {deliveries.length === 0 ? (
+            <p className="px-5 py-4 text-[13px] text-muted-foreground">Nothing sent yet.</p>
           ) : (
-            <ul className="space-y-2">
-              {deliveryData.deliveries.slice(0, 8).map((delivery) => (
-                <li
-                  key={delivery.id}
-                  className="flex items-start justify-between gap-3 border-b border-neutral-100 pb-2 text-[12px] dark:border-neutral-900"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-neutral-700 dark:text-neutral-300">
-                      {delivery.event} → {delivery.channel_name ?? delivery.channel_type}
-                    </span>
+            <ul className="divide-y divide-border">
+              {deliveries.slice(0, 8).map((delivery) => (
+                <li key={delivery.id} className="flex items-start gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] text-foreground">
+                      <span className="font-medium">{delivery.event}</span>
+                      <span className="mx-1.5 text-subtle-foreground">→</span>
+                      {delivery.channel_name ?? delivery.channel_type}
+                    </p>
                     {delivery.error && (
-                      <span className="block truncate text-red-500" title={delivery.error}>
+                      <p
+                        className="mt-0.5 truncate font-mono text-xs text-down"
+                        title={delivery.error}
+                      >
                         {delivery.error}
-                      </span>
+                      </p>
                     )}
-                  </span>
-                  <span
-                    className={
-                      delivery.status === 'sent'
-                        ? 'shrink-0 text-emerald-600'
-                        : 'shrink-0 text-red-500'
-                    }
-                  >
+                    <p className="mt-0.5 text-[11px] text-subtle-foreground">
+                      {formatRelative(delivery.created_at)}
+                    </p>
+                  </div>
+                  <Badge variant={delivery.status === 'sent' ? 'up' : 'down'} size="sm">
                     {delivery.status}
-                  </span>
+                  </Badge>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </section>
       </div>
     </div>
   )

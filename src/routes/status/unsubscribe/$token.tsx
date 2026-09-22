@@ -20,6 +20,7 @@ function Unsubscribe() {
   return (
     <Outcome
       loading={isLoading}
+      ok={!error}
       title={error ? 'That link has expired' : 'Unsubscribed'}
       body={
         error

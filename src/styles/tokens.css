@@ -1,82 +1,144 @@
+/*
+ * RouteRX design tokens.
+ *
+ * Every colour the UI uses is defined here, once per theme, and exposed to
+ * Tailwind through @theme in index.css. Components never hardcode a hex —
+ * they use the semantic utilities (bg-card, text-muted-foreground, text-up…)
+ * so that both themes stay in step and a palette change is a one-file edit.
+ */
+
 :root {
-  /* ================= LIGHT MODE ================= */
-  /* Backgrounds */
-  --bg-base: #F8FAFC;
-  --bg-surface: #FFFFFF;
-  --bg-elevated: #F1F5F9;
-  --bg-hover: #E2E8F0;
-  --border-subtle: #E5E7EB;
+  /* ---------- Surfaces ---------- */
+  --background: #f7f7f8;
+  --foreground: #0b0b0f;
 
-  /* Text */
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
-  --text-disabled: #94A3B8;
+  --card: #ffffff;
+  --card-foreground: #0b0b0f;
 
-  /* Brand */
-  --accent-primary: #00B8E6;
-  --accent-soft: rgba(0, 184, 230, 0.12);
+  --popover: #ffffff;
+  --popover-foreground: #0b0b0f;
 
-  /* Status */
-  --status-up: #16A34A;
-  --status-degraded: #D97706;
-  --status-down: #DC2626;
-  --status-paused: #6B7280;
-  --status-unknown: #8B5CF6;
+  --surface-2: #f1f1f3;
+  --surface-3: #e9e9ec;
 
-  /* Charts */
-  --chart-latency: #00B8E6;
-  --chart-uptime: #16A34A;
-  --chart-error: #DC2626;
-  --chart-retry: #D97706;
-  --chart-grid: #CBD5E1;
+  --muted: #f1f1f3;
+  --muted-foreground: #5b5b66;
+  --subtle-foreground: #8a8a96;
 
-  /* Shadcn defaults */
-  --background: var(--bg-surface);
-  --foreground: var(--text-primary);
-  --popover: var(--bg-surface);
-  --popover-foreground: var(--text-primary);
-  --border: var(--border-subtle);
+  --accent: #ededf0;
+  --accent-foreground: #0b0b0f;
+
+  --border: #e3e3e8;
+  --border-strong: #cfcfd6;
+  --input: #e3e3e8;
+
+  /* ---------- Brand ---------- */
+  --brand: #0891b2;
+  --brand-foreground: #ffffff;
+  --brand-soft: rgba(8, 145, 178, 0.1);
+  --brand-glow: rgba(8, 145, 178, 0.35);
+
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+
+  --secondary: #ffffff;
+  --secondary-foreground: #0b0b0f;
+
+  --ring: var(--brand);
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* ---------- Status ---------- */
+  --up: #059669;
+  --up-soft: rgba(5, 150, 105, 0.1);
+  --degraded: #d97706;
+  --degraded-soft: rgba(217, 119, 6, 0.12);
+  --down: #dc2626;
+  --down-soft: rgba(220, 38, 38, 0.1);
+  --maintenance: #0284c7;
+  --maintenance-soft: rgba(2, 132, 199, 0.1);
+  --paused: #71717a;
+  --paused-soft: rgba(113, 113, 122, 0.12);
+  --unknown: #7c3aed;
+  --unknown-soft: rgba(124, 58, 237, 0.1);
+
+  /* ---------- Charts ---------- */
+  --chart-dns: #64748b;
+  --chart-tcp: #d97706;
+  --chart-tls: #7c3aed;
+  --chart-ttfb: #0891b2;
+  --chart-grid: rgba(11, 11, 15, 0.06);
+
+  /* ---------- Shape ---------- */
   --radius: 0.75rem;
+  --shadow-sm: 0 1px 2px rgba(11, 11, 15, 0.04), 0 1px 1px rgba(11, 11, 15, 0.03);
+  --shadow-md: 0 4px 16px rgba(11, 11, 15, 0.06), 0 1px 2px rgba(11, 11, 15, 0.04);
+  --shadow-lg: 0 24px 48px -12px rgba(11, 11, 15, 0.16);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .dark {
-  /* ================= DARK MODE ================= */
-  /* Backgrounds */
-  --bg-base: #0B1220;
-  --bg-surface: #111827;
-  --bg-elevated: #172036;
-  --bg-hover: #1F2A44;
-  --border-subtle: #26314F;
+  --background: #09090b;
+  --foreground: #f4f4f5;
 
-  /* Text */
-  --text-primary: #E5E7EB;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
-  --text-disabled: #4B5563;
+  --card: #101013;
+  --card-foreground: #f4f4f5;
 
-  /* Brand */
-  --accent-primary: #00D1FF;
-  --accent-soft: rgba(0, 209, 255, 0.15);
+  --popover: #141418;
+  --popover-foreground: #f4f4f5;
 
-  /* Status */
-  --status-up: #22C55E;
-  --status-degraded: #F59E0B;
-  --status-down: #EF4444;
-  --status-paused: #6B7280;
-  --status-unknown: #A78BFA;
+  --surface-2: #151519;
+  --surface-3: #1b1b20;
 
-  /* Charts */
-  --chart-latency: #00D1FF;
-  --chart-uptime: #22C55E;
-  --chart-error: #EF4444;
-  --chart-retry: #F59E0B;
-  --chart-grid: #24304D;
+  --muted: #151519;
+  --muted-foreground: #a1a1aa;
+  --subtle-foreground: #6e6e78;
 
-  /* Shadcn defaults */
-  --background: var(--bg-surface);
-  --foreground: var(--text-primary);
-  --popover: var(--bg-surface);
-  --popover-foreground: var(--text-primary);
-  --border: var(--border-subtle);
+  --accent: #1a1a1f;
+  --accent-foreground: #f4f4f5;
+
+  --border: #222228;
+  --border-strong: #2f2f37;
+  --input: #2a2a31;
+
+  --brand: #22d3ee;
+  --brand-foreground: #06262e;
+  --brand-soft: rgba(34, 211, 238, 0.12);
+  --brand-glow: rgba(34, 211, 238, 0.35);
+
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+
+  --secondary: #17171c;
+  --secondary-foreground: #f4f4f5;
+
+  --ring: var(--brand);
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --up: #10b981;
+  --up-soft: rgba(16, 185, 129, 0.14);
+  --degraded: #f59e0b;
+  --degraded-soft: rgba(245, 158, 11, 0.14);
+  --down: #ef4444;
+  --down-soft: rgba(239, 68, 68, 0.14);
+  --maintenance: #38bdf8;
+  --maintenance-soft: rgba(56, 189, 248, 0.14);
+  --paused: #71717a;
+  --paused-soft: rgba(113, 113, 122, 0.18);
+  --unknown: #a78bfa;
+  --unknown-soft: rgba(167, 139, 250, 0.14);
+
+  --chart-dns: #94a3b8;
+  --chart-tcp: #f59e0b;
+  --chart-tls: #a78bfa;
+  --chart-ttfb: #22d3ee;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 32px 64px -16px rgba(0, 0, 0, 0.7);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }

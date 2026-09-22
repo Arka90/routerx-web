@@ -1,4 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { features } from '@/lib/features'
 import { toast } from 'sonner'
 import { Check } from 'lucide-react'
 import { useBilling, useBillingPortal, useCheckout } from '@/hooks/status.queries'
@@ -8,6 +9,13 @@ import { cn } from '@/lib/utils'
 import type { Plan, PlanLimits } from '@/types/status.types'
 
 export const Route = createFileRoute('/_authenticated/billing')({
+  // Billing is built but switched off for now (see src/lib/features.ts).
+  // Nothing links here while the flag is off; a typed URL lands on the dashboard.
+  beforeLoad: () => {
+    if (!features.billing) {
+      throw redirect({ to: '/dashboard' })
+    }
+  },
   component: BillingPage,
 })
 

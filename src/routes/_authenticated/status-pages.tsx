@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Globe, Plus } from 'lucide-react'
 import { useCreateStatusPage, useStatusPages } from '@/hooks/status.queries'
 import { useCanManage } from '@/stores/authStore'
 import { getApiErrorMessage } from '@/api/errors'
+import { formatRelative } from '@/lib/format'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -13,7 +16,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Field, FormError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Page, PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/_authenticated/status-pages')({
   component: StatusPagesPage,
@@ -26,78 +33,67 @@ function StatusPagesPage() {
   const pages = data?.status_pages ?? []
 
   return (
-    <div className="animate-in fade-in space-y-8 p-8 duration-500">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Status pages
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-neutral-500 dark:text-neutral-400">
-            A public page your customers can read during an outage, without an account.
-          </p>
-        </div>
-
-        {canManage && <CreatePageDialog />}
-      </div>
+    <Page>
+      <PageHeader
+        title="Status pages"
+        description="A public page your customers can read during an outage, without an account."
+        actions={canManage ? <CreatePageDialog /> : undefined}
+      />
 
       {isLoading ? (
-        <div className="h-24 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-900" />
-      ) : pages.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 py-16 text-center dark:border-neutral-800 dark:bg-[#0A0A0A]">
-          <h3 className="mb-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-            No status pages yet
-          </h3>
-          <p className="text-xs text-neutral-500">
-            A status page is the cheapest way to stop "is it down?" emails during an incident.
-          </p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
         </div>
+      ) : pages.length === 0 ? (
+        <EmptyState
+          icon={<Globe />}
+          title="No status pages yet"
+          description={
+            'A status page is the cheapest way to stop "is it down?" emails during an incident.'
+          }
+          action={canManage ? <CreatePageDialog /> : undefined}
+        />
       ) : (
-        <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {pages.map((page) => (
-            <div
-              key={page.id}
-              className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
+            <div key={page.id} className="card card-hover flex flex-col p-5">
+              <Link
+                to="/status-page/$pageId"
+                params={{ pageId: String(page.id) }}
+                className="block min-w-0 flex-1 rounded-md"
+              >
                 <div className="flex items-center gap-2">
-                  <Link
-                    to="/status-page/$pageId"
-                    params={{ pageId: String(page.id) }}
-                    className="text-sm font-medium text-neutral-900 hover:underline dark:text-neutral-100"
-                  >
+                  <span className="truncate text-sm font-semibold text-foreground">
                     {page.name}
-                  </Link>
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                      page.published
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500'
-                        : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-900'
-                    }`}
-                  >
-                    {page.published ? 'Live' : 'Draft'}
                   </span>
+                  <Badge variant={page.published ? 'up' : 'paused'} size="sm">
+                    {page.published ? 'Live' : 'Draft'}
+                  </Badge>
                 </div>
-                <p className="mt-0.5 truncate font-mono text-[12px] text-neutral-500">
+                <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
                   /status/{page.slug}
                 </p>
-              </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Updated {formatRelative(page.updated_at)}
+                </p>
+              </Link>
 
               {page.published && (
-                <a
-                  href={page.public_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  View
-                </a>
+                <div className="mt-4 border-t border-border pt-4">
+                  <Button asChild variant="outline" size="xs">
+                    <a href={page.public_url} target="_blank" rel="noreferrer">
+                      <ExternalLink />
+                      View public page
+                    </a>
+                  </Button>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
-    </div>
+    </Page>
   )
 }
 
@@ -121,9 +117,10 @@ function CreatePageDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <button className="rounded-md bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-opacity hover:opacity-90 dark:bg-white dark:text-black">
+        <Button variant="primary">
+          <Plus />
           New status page
-        </button>
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[440px]">
@@ -135,7 +132,7 @@ function CreatePageDialog() {
         </DialogHeader>
 
         <form
-          className="space-y-4 pt-2"
+          className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault()
             setError(null)
@@ -155,10 +152,7 @@ function CreatePageDialog() {
             )
           }}
         >
-          <div className="space-y-2">
-            <label htmlFor="page-name" className="text-sm font-medium">
-              Name
-            </label>
+          <Field id="page-name" label="Name">
             <Input
               id="page-name"
               autoFocus
@@ -166,12 +160,13 @@ function CreatePageDialog() {
               onChange={(event) => setName(event.target.value)}
               placeholder="Acme Status"
             />
-          </div>
+          </Field>
 
-          <div className="space-y-2">
-            <label htmlFor="page-slug" className="text-sm font-medium">
-              Address
-            </label>
+          <Field
+            id="page-slug"
+            label="Address"
+            hint={<span className="font-mono">/status/{suggested || '…'}</span>}
+          >
             <Input
               id="page-slug"
               value={suggested}
@@ -179,22 +174,19 @@ function CreatePageDialog() {
               placeholder="acme-status"
               className="font-mono text-[13px]"
             />
-            <p className="text-[12px] text-neutral-500">/status/{suggested || '…'}</p>
-          </div>
+          </Field>
 
-          {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-600 dark:bg-red-500/10 dark:text-red-400">
-              {error}
-            </p>
-          )}
+          <FormError>{error}</FormError>
 
-          <button
+          <Button
             type="submit"
-            disabled={createPage.isPending || !name.trim()}
-            className="h-10 w-full rounded-md bg-black text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
+            variant="primary"
+            className="w-full"
+            loading={createPage.isPending}
+            disabled={!name.trim()}
           >
-            {createPage.isPending ? 'Creating…' : 'Create page'}
-          </button>
+            Create page
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

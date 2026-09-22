@@ -2,6 +2,8 @@ import { cn } from '@/lib/utils'
 
 interface UptimeBarProps {
   history: Array<{ date: string; uptime: number | null }>
+  /** Hide the "90 days ago / Today" axis when several bars share one. */
+  showAxis?: boolean
 }
 
 /**
@@ -11,16 +13,14 @@ interface UptimeBarProps {
  * slot rather than as an outage — showing 89 red days for a component added
  * yesterday would be a lie in the most visible place the product has.
  */
-export function UptimeBar({ history }: UptimeBarProps) {
+export function UptimeBar({ history, showAxis = true }: UptimeBarProps) {
   if (history.length === 0) return null
 
   const known = history.filter((day) => day.uptime !== null)
-  const first = known[0]
-  const last = known[known.length - 1]
 
   return (
     <div>
-      <div className="flex h-8 items-stretch gap-[2px]">
+      <div className="flex h-7 items-stretch gap-px sm:gap-[2px]">
         {history.map((day) => (
           <div
             key={day.date}
@@ -30,23 +30,25 @@ export function UptimeBar({ history }: UptimeBarProps) {
                 : `${day.date} — ${day.uptime.toFixed(2)}%`
             }
             className={cn(
-              'flex-1 rounded-[1px] transition-opacity hover:opacity-70',
+              'flex-1 rounded-[2px] transition-opacity hover:opacity-70',
               day.uptime === null
-                ? 'bg-neutral-100 dark:bg-neutral-900'
+                ? 'bg-surface-3'
                 : day.uptime >= 99.9
-                  ? 'bg-emerald-500'
+                  ? 'bg-up'
                   : day.uptime >= 95
-                    ? 'bg-amber-400'
-                    : 'bg-red-500'
+                    ? 'bg-degraded'
+                    : 'bg-down'
             )}
           />
         ))}
       </div>
 
-      <div className="mt-1.5 flex justify-between text-[11px] text-neutral-400">
-        <span>{first ? `${known.length} days ago` : ''}</span>
-        <span>{last ? 'Today' : ''}</span>
-      </div>
+      {showAxis && (
+        <div className="mt-1.5 flex justify-between text-[11px] text-subtle-foreground">
+          <span>{known.length > 0 ? `${known.length} days ago` : ''}</span>
+          <span>Today</span>
+        </div>
+      )}
     </div>
   )
 }

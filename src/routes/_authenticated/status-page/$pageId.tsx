@@ -11,15 +11,22 @@ import {
 import { useMonitors } from '@/hooks/monitor.queries'
 import { useCanManage } from '@/stores/authStore'
 import { getApiErrorMessage } from '@/api/errors'
+import { hostnameOf } from '@/lib/format'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox, CheckboxField } from '@/components/ui/checkbox'
+import { useConfirm } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Page, PageHeader, SectionHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 import type { StatusPage } from '@/types/status.types'
 
 export const Route = createFileRoute('/_authenticated/status-page/$pageId')({
   component: StatusPageEditor,
 })
-
-const labelClass = 'text-sm font-medium text-neutral-900 dark:text-neutral-100'
-const hintClass = 'text-[12px] text-neutral-500 dark:text-neutral-400'
 
 interface Selection {
   monitor_id: number
@@ -40,81 +47,109 @@ function StatusPageEditor() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl animate-pulse space-y-4 p-8">
-        <div className="h-8 w-48 rounded bg-neutral-200 dark:bg-neutral-800" />
-        <div className="h-64 rounded-xl bg-neutral-100 dark:bg-neutral-900" />
-      </div>
+      <Page width="narrow">
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-64" />
+      </Page>
     )
   }
 
   if (isError || !data) {
     return (
-      <div className="mx-auto max-w-3xl p-8 text-center text-sm text-neutral-500">
-        That status page doesn't exist.{' '}
-        <Link to="/status-pages" className="font-medium underline">
-          Back to status pages
-        </Link>
-      </div>
+      <Page width="narrow">
+        <EmptyState
+          title="That status page doesn't exist."
+          description="It may have been deleted, or the link is wrong."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link to="/status-pages">
+                <ChevronLeft />
+                Back to status pages
+              </Link>
+            </Button>
+          }
+        />
+      </Page>
     )
   }
 
   const page = data.status_page
 
   return (
-    <div className="animate-in fade-in mx-auto max-w-3xl space-y-10 p-8 duration-500">
-      <div>
+    <Page width="narrow">
+      <div className="space-y-4">
         <Link
           to="/status-pages"
-          className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+          className="inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ChevronLeft className="h-4 w-4" /> Status pages
+          <ChevronLeft className="size-4" aria-hidden />
+          Status pages
         </Link>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-            {page.name}
-          </h1>
+        <PageHeader
+          title={page.name}
+          description={
+            <span className="flex flex-wrap items-center gap-2">
+              {page.published ? (
+                <span className="min-w-0 truncate">
+                  Live at{' '}
+                  <a
+                    href={page.public_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="link font-mono text-[13px]"
+                  >
+                    {page.public_url}
+                  </a>
+                </span>
+              ) : (
+                <span>Draft — nothing is public until you publish.</span>
+              )}
+              {data.subscriber_count > 0 && (
+                <Badge size="sm">
+                  {data.subscriber_count} subscriber{data.subscriber_count === 1 ? '' : 's'}
+                </Badge>
+              )}
+            </span>
+          }
+          actions={
+            <>
+              {page.published && (
+                <Button asChild variant="outline" size="sm">
+                  <a href={page.public_url} target="_blank" rel="noreferrer">
+                    <ExternalLink />
+                    View
+                  </a>
+                </Button>
+              )}
 
-          <div className="flex items-center gap-2">
-            {page.published && (
-              <a
-                href={page.public_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
-              >
-                <ExternalLink className="h-3 w-3" />
-                View
-              </a>
-            )}
-
-            {canManage && (
-              <button
-                onClick={() =>
-                  updatePage.mutate(
-                    { id, payload: { published: !page.published } },
-                    {
-                      onSuccess: () =>
-                        toast.success(page.published ? 'Page unpublished' : 'Page is live'),
-                      onError: (error) =>
-                        toast.error(getApiErrorMessage(error, 'Could not change visibility')),
-                    }
-                  )
-                }
-                className="rounded-md bg-neutral-900 px-4 py-1.5 text-[12px] font-medium text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
-              >
-                {page.published ? 'Unpublish' : 'Publish'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <p className={`mt-1 ${hintClass}`}>
-          {page.published
-            ? `Live at ${page.public_url}`
-            : 'Draft — nothing is public until you publish.'}
-          {data.subscriber_count > 0 && ` · ${data.subscriber_count} subscriber(s)`}
-        </p>
+              {canManage && (
+                <Button
+                  variant={page.published ? 'outline' : 'primary'}
+                  size="sm"
+                  loading={updatePage.isPending}
+                  onClick={() =>
+                    updatePage.mutate(
+                      { id, payload: { published: !page.published } },
+                      {
+                        onSuccess: () =>
+                          toast.success(page.published ? 'Page unpublished' : 'Page is live'),
+                        onError: (error) =>
+                          toast.error(getApiErrorMessage(error, 'Could not change visibility')),
+                      }
+                    )
+                  }
+                >
+                  {page.published ? 'Unpublish' : 'Publish'}
+                </Button>
+              )}
+            </>
+          }
+        />
       </div>
 
       {/* Keyed on the page's updated_at so a save elsewhere reseeds the forms,
@@ -133,7 +168,7 @@ function StatusPageEditor() {
       {canManage && (
         <PageDetailsForm key={`details-${page.updated_at}`} page={page} pageId={id} />
       )}
-    </div>
+    </Page>
   )
 }
 
@@ -160,37 +195,48 @@ function ComponentPicker({
   }
 
   return (
-    <section className="space-y-4">
-      <h2 className={labelClass}>Components</h2>
-      <p className={hintClass}>
-        Pick which monitors appear, and what to call them. Visitors see the name you give
-        here — never the monitor's URL.
-      </p>
+    <section className="card">
+      <div className="px-5 pt-5 pb-4">
+        <SectionHeader
+          title="Components"
+          description="Pick which monitors appear, and what to call them. Visitors see the name you give here — never the monitor's URL."
+        />
+      </div>
 
       {monitors.length === 0 ? (
-        <p className={hintClass}>No monitors to show yet.</p>
+        <p className="border-t border-border px-5 py-4 text-[13px] text-muted-foreground">
+          No monitors to show yet.
+        </p>
       ) : (
-        <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        <div className="divide-y divide-border border-t border-border">
           {monitors.map((monitor) => {
             const selected = selection.find((item) => item.monitor_id === monitor.id)
             const fallback = monitor.name ?? monitor.url
 
             return (
-              <div key={monitor.id} className="flex items-center gap-3 p-3">
-                <input
-                  type="checkbox"
+              <div key={monitor.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <Checkbox
+                  id={`component-${monitor.id}`}
                   disabled={!canManage}
                   checked={Boolean(selected)}
-                  onChange={() => toggleMonitor(monitor.id, fallback)}
-                  className="h-4 w-4 shrink-0 accent-black dark:accent-white"
+                  onCheckedChange={() => toggleMonitor(monitor.id, fallback)}
                   aria-label={`Show ${fallback} on this page`}
                 />
 
-                <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-500">
-                  {monitor.url}
-                </span>
+                <label
+                  htmlFor={`component-${monitor.id}`}
+                  className="min-w-0 flex-1 cursor-pointer"
+                >
+                  <span className="block truncate text-sm text-foreground">
+                    {monitor.name ?? hostnameOf(monitor.url)}
+                  </span>
+                  <span className="block truncate font-mono text-xs text-muted-foreground">
+                    {monitor.url}
+                  </span>
+                </label>
 
                 <Input
+                  aria-label={`Display name for ${fallback}`}
                   value={selected?.display_name ?? ''}
                   disabled={!canManage || !selected}
                   placeholder={selected ? fallback : 'Not shown'}
@@ -203,7 +249,7 @@ function ComponentPicker({
                       )
                     )
                   }
-                  className="h-8 w-48 shrink-0 text-[13px]"
+                  className="h-8 basis-full text-[13px] sm:w-48 sm:shrink-0 sm:basis-auto"
                 />
               </div>
             )
@@ -212,23 +258,23 @@ function ComponentPicker({
       )}
 
       {canManage && (
-        <button
-          onClick={() =>
-            setComponents.mutate(
-              { id: pageId, components: selection },
-              {
-                onSuccess: () => toast.success('Components updated'),
-                onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save')),
-              }
-            )
-          }
-          disabled={
-            setComponents.isPending || selection.some((item) => !item.display_name.trim())
-          }
-          className="h-9 rounded-md bg-neutral-900 px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
-        >
-          {setComponents.isPending ? 'Saving…' : 'Save components'}
-        </button>
+        <div className="flex items-center border-t border-border px-5 py-4">
+          <Button
+            loading={setComponents.isPending}
+            disabled={selection.some((item) => !item.display_name.trim())}
+            onClick={() =>
+              setComponents.mutate(
+                { id: pageId, components: selection },
+                {
+                  onSuccess: () => toast.success('Components updated'),
+                  onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save')),
+                }
+              )
+            }
+          >
+            Save components
+          </Button>
+        </div>
       )}
     </section>
   )
@@ -238,6 +284,7 @@ function PageDetailsForm({ page, pageId }: { page: StatusPage; pageId: number })
   const navigate = useNavigate()
   const updatePage = useUpdateStatusPage()
   const deletePage = useDeleteStatusPage()
+  const { confirm, dialog } = useConfirm()
 
   const [name, setName] = useState(page.name)
   const [slug, setSlug] = useState(page.slug)
@@ -247,132 +294,120 @@ function PageDetailsForm({ page, pageId }: { page: StatusPage; pageId: number })
   const [showUptime, setShowUptime] = useState(page.show_uptime)
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
+    <>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
 
-        updatePage.mutate(
-          {
-            id: pageId,
-            payload: {
-              name: name.trim(),
-              slug: slug.trim(),
-              headline: headline.trim() || null,
-              about: about.trim() || null,
-              support_url: supportUrl.trim() || null,
-              show_uptime: showUptime,
-            },
-          },
-          {
-            onSuccess: () => toast.success('Status page saved'),
-            onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save')),
-          }
-        )
-      }}
-      className="space-y-5"
-    >
-      <h2 className={labelClass}>Page details</h2>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <label htmlFor="sp-name" className={labelClass}>
-            Name
-          </label>
-          <Input id="sp-name" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="sp-slug" className={labelClass}>
-            Address
-          </label>
-          <Input
-            id="sp-slug"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className="font-mono text-[13px]"
-          />
-          <p className={hintClass}>Changing this breaks any link already shared.</p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="sp-headline" className={labelClass}>
-          Headline
-        </label>
-        <Input
-          id="sp-headline"
-          value={headline}
-          onChange={(e) => setHeadline(e.target.value)}
-          placeholder="Live status of the Acme platform"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="sp-about" className={labelClass}>
-          About
-        </label>
-        <textarea
-          id="sp-about"
-          rows={4}
-          value={about}
-          onChange={(e) => setAbout(e.target.value)}
-          placeholder="Anything visitors should know — maintenance windows, escalation paths."
-          className="w-full rounded-md border border-neutral-200 bg-white p-3 text-[13px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black dark:border-neutral-800 dark:bg-[#111] dark:text-neutral-100 dark:focus-visible:ring-white"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="sp-support" className={labelClass}>
-          Support link
-        </label>
-        <Input
-          id="sp-support"
-          value={supportUrl}
-          onChange={(e) => setSupportUrl(e.target.value)}
-          placeholder="https://acme.com/support"
-        />
-      </div>
-
-      <label className="flex items-center gap-2.5">
-        <input
-          type="checkbox"
-          checked={showUptime}
-          onChange={(e) => setShowUptime(e.target.checked)}
-          className="h-4 w-4 accent-black dark:accent-white"
-        />
-        <span className="text-[13px] text-neutral-700 dark:text-neutral-300">
-          Show 90 days of uptime history
-        </span>
-      </label>
-
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={updatePage.isPending}
-          className="h-10 rounded-md bg-black px-5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-white dark:text-black"
-        >
-          {updatePage.isPending ? 'Saving…' : 'Save details'}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (!confirm(`Delete "${page.name}"? Any shared link stops working.`)) return
-
-            deletePage.mutate(pageId, {
-              onSuccess: () => {
-                toast.success('Status page deleted')
-                navigate({ to: '/status-pages' })
+          updatePage.mutate(
+            {
+              id: pageId,
+              payload: {
+                name: name.trim(),
+                slug: slug.trim(),
+                headline: headline.trim() || null,
+                about: about.trim() || null,
+                support_url: supportUrl.trim() || null,
+                show_uptime: showUptime,
               },
-              onError: (error) => toast.error(getApiErrorMessage(error, 'Could not delete')),
-            })
-          }}
-          className="flex items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-2 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-neutral-800 dark:hover:bg-red-900/20"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete
-        </button>
-      </div>
-    </form>
+            },
+            {
+              onSuccess: () => toast.success('Status page saved'),
+              onError: (error) => toast.error(getApiErrorMessage(error, 'Could not save')),
+            }
+          )
+        }}
+        className="card space-y-5 p-5"
+      >
+        <SectionHeader title="Page details" />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field id="sp-name" label="Name">
+            <Input id="sp-name" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+
+          <Field
+            id="sp-slug"
+            label="Address"
+            hint="Changing this breaks any link already shared."
+          >
+            <Input
+              id="sp-slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              className="font-mono text-[13px]"
+            />
+          </Field>
+        </div>
+
+        <Field id="sp-headline" label="Headline" optional>
+          <Input
+            id="sp-headline"
+            value={headline}
+            onChange={(e) => setHeadline(e.target.value)}
+            placeholder="Live status of the Acme platform"
+          />
+        </Field>
+
+        <Field id="sp-about" label="About" optional>
+          <Textarea
+            id="sp-about"
+            rows={4}
+            value={about}
+            onChange={(e) => setAbout(e.target.value)}
+            placeholder="Anything visitors should know — maintenance windows, escalation paths."
+          />
+        </Field>
+
+        <Field id="sp-support" label="Support link" optional>
+          <Input
+            id="sp-support"
+            value={supportUrl}
+            onChange={(e) => setSupportUrl(e.target.value)}
+            placeholder="https://acme.com/support"
+          />
+        </Field>
+
+        <CheckboxField
+          id="sp-uptime"
+          label="Show 90 days of uptime history"
+          checked={showUptime}
+          onCheckedChange={(checked) => setShowUptime(checked === true)}
+        />
+
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
+          <Button type="submit" loading={updatePage.isPending}>
+            Save details
+          </Button>
+
+          <Button
+            type="button"
+            variant="destructive"
+            loading={deletePage.isPending}
+            onClick={() =>
+              confirm({
+                title: `Delete "${page.name}"?`,
+                description: 'Any shared link stops working. This cannot be undone.',
+                confirmLabel: 'Delete page',
+                destructive: true,
+                onConfirm: () =>
+                  deletePage.mutate(pageId, {
+                    onSuccess: () => {
+                      toast.success('Status page deleted')
+                      navigate({ to: '/status-pages' })
+                    },
+                    onError: (error) => toast.error(getApiErrorMessage(error, 'Could not delete')),
+                  }),
+              })
+            }
+          >
+            {!deletePage.isPending && <Trash2 />}
+            Delete
+          </Button>
+        </div>
+      </form>
+
+      {dialog}
+    </>
   )
 }

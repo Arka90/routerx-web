@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
 import { useCreateMonitor } from '@/hooks/monitor.queries'
 import { getApiErrorMessage } from '@/api/errors'
 import { useCanManage } from '@/stores/authStore'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -46,12 +48,13 @@ export function CreateMonitorModal() {
       }}
     >
       <DialogTrigger asChild>
-        <button className="rounded-md bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-opacity hover:opacity-90 dark:bg-white dark:text-black">
-          Add Monitor
-        </button>
+        <Button variant="primary">
+          <Plus />
+          Add monitor
+        </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create a monitor</DialogTitle>
           <DialogDescription>
@@ -59,14 +62,12 @@ export function CreateMonitorModal() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="pt-2">
-          <MonitorForm
-            submitLabel="Create monitor"
-            pending={createMonitor.isPending}
-            onSubmit={handleSubmit}
-            error={error}
-          />
-        </div>
+        <MonitorForm
+          submitLabel="Create monitor"
+          pending={createMonitor.isPending}
+          onSubmit={handleSubmit}
+          error={error}
+        />
       </DialogContent>
     </Dialog>
   )
