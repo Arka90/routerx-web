@@ -1,13 +1,18 @@
 import api from './client';
 import { queryURL } from '@/services/queryURL';
-import type { 
-  Monitor, 
-  CreateMonitorPayload, 
+import type {
+  AlertDelivery,
+  AlertPolicy,
+  AlertPolicyPayload,
+  CreateMonitorPayload,
+  IncidentResponse,
   MaintenancePayload,
   MaintenanceResponse,
-  IncidentResponse, 
+  Monitor,
+  MonitorDetail,
+  OrgIncident,
+  Probe,
   UptimeResponse,
-  Probe
 } from '@/types/monitor.types';
 
 export const monitorApi = {
@@ -16,23 +21,54 @@ export const monitorApi = {
     return response.data;
   },
 
-  createMonitor: async (payload: CreateMonitorPayload): Promise<{ message: string, monitor: Monitor }> => {
-    const response = await api.post<{ message: string, monitor: Monitor }>(queryURL.monitors, payload);
+  getMonitor: async (id: number): Promise<MonitorDetail> => {
+    const response = await api.get<MonitorDetail>(queryURL.monitorById(id));
     return response.data;
   },
 
-  updateMonitor: async (id: number, payload: CreateMonitorPayload): Promise<{ message: string, monitor: Monitor }> => {
-    const response = await api.patch<{ message: string, monitor: Monitor }>(queryURL.monitorById(id), payload);
+  createMonitor: async (
+    payload: CreateMonitorPayload
+  ): Promise<{ message: string; monitor: Monitor }> => {
+    const response = await api.post(queryURL.monitors, payload);
+    return response.data;
+  },
+
+  updateMonitor: async (
+    id: number,
+    payload: CreateMonitorPayload
+  ): Promise<{ message: string; monitor: Monitor }> => {
+    const response = await api.patch(queryURL.monitorById(id), payload);
     return response.data;
   },
 
   deleteMonitor: async (id: number): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(queryURL.monitorById(id));
+    const response = await api.delete(queryURL.monitorById(id));
     return response.data;
   },
 
-  setMaintenance: async (id: number, payload: MaintenancePayload): Promise<{ message: string }> => {
-    const response = await api.post<{ message: string }>(queryURL.maintenance(id), payload);
+  getPolicy: async (id: number): Promise<{ policy: AlertPolicy; channel_ids: number[] }> => {
+    const response = await api.get(queryURL.policy(id));
+    return response.data;
+  },
+
+  updatePolicy: async (
+    id: number,
+    payload: AlertPolicyPayload
+  ): Promise<{ policy: AlertPolicy; channel_ids: number[] }> => {
+    const response = await api.put(queryURL.policy(id), payload);
+    return response.data;
+  },
+
+  getDeliveries: async (id: number): Promise<{ deliveries: AlertDelivery[] }> => {
+    const response = await api.get(queryURL.deliveries(id));
+    return response.data;
+  },
+
+  setMaintenance: async (
+    id: number,
+    payload: MaintenancePayload
+  ): Promise<{ message: string }> => {
+    const response = await api.post(queryURL.maintenance(id), payload);
     return response.data;
   },
 
@@ -42,12 +78,27 @@ export const monitorApi = {
   },
 
   deleteMaintenance: async (id: number): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(queryURL.maintenance(id));
+    const response = await api.delete(queryURL.maintenance(id));
     return response.data;
   },
 
   getIncidents: async (monitorId: number): Promise<IncidentResponse> => {
     const response = await api.get<IncidentResponse>(queryURL.incidents(monitorId));
+    return response.data;
+  },
+
+  /** Every incident in the workspace — one request, not one per monitor. */
+  getAllIncidents: async (
+    openOnly = false
+  ): Promise<{ total: number; incidents: OrgIncident[] }> => {
+    const response = await api.get(queryURL.allIncidents, {
+      params: openOnly ? { open: 'true' } : undefined,
+    });
+    return response.data;
+  },
+
+  acknowledgeIncident: async (incidentId: number): Promise<{ message: string }> => {
+    const response = await api.post(queryURL.acknowledgeIncident(incidentId));
     return response.data;
   },
 
