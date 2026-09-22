@@ -2,6 +2,7 @@ import { Link, useLocation } from '@tanstack/react-router'
 import {
   AlertTriangle,
   Bell,
+  CreditCard,
   Globe,
   LayoutDashboard,
   LogOut,
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Alerts', href: '/channels', icon: Bell },
   { name: 'Team', href: '/team', icon: Users },
   { name: 'Status Pages', href: '/status-pages', icon: Globe },
+  { name: 'Plan & usage', href: '/billing', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
