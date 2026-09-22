@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMonitors, useIncidents } from '@/hooks/monitor.queries'
 import { Link } from '@tanstack/react-router'
+import { formatDuration } from '@/lib/format'
 
 export const Route = createFileRoute('/_authenticated/incidents')({
   component: IncidentsPage,
@@ -29,7 +30,7 @@ function IncidentsPage() {
         <div className="flex flex-col h-64 items-center justify-center rounded-none border border-neutral-200 border-dashed bg-neutral-50 dark:border-neutral-800 dark:bg-black p-6 text-center">
             <p className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-2">No Monitors Configured</p>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4 max-w-sm">Create a monitor from the dashboard to start tracking incidents.</p>
-            <Link to="/" className="text-sm font-medium hover:underline text-neutral-900 dark:text-white">Go to Dashboard</Link>
+            <Link to="/dashboard" className="text-sm font-medium hover:underline text-neutral-900 dark:text-white">Go to Dashboard</Link>
         </div>
       ) : (
         <div className="space-y-6">
@@ -65,7 +66,7 @@ function MonitorIncidentsSection({ monitorId, url }: { monitorId: number, url: s
                                 </span>
                             </div>
                             <span className="text-neutral-500 bg-neutral-100 dark:bg-[#111] px-2 py-1 rounded-none text-[11px] font-medium tracking-widest uppercase">
-                                Duration: {incident.duration_seconds !== null ? `${incident.duration_seconds}s` : 'Ongoing'}
+                                Duration: {incident.duration_seconds !== null ? formatDuration(incident.duration_seconds) : 'Ongoing'}
                             </span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[13px]">

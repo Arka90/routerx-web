@@ -89,11 +89,19 @@ export const useIncidents = (monitorId: number) => {
   });
 };
 
+/**
+ * Hours of history the dashboard asks for. The UI has always been labelled
+ * "30-Day Uptime", but no window was ever sent, so the API fell back to its
+ * 24-hour default and the headline number was a day of data under a
+ * thirty-day heading.
+ */
+export const UPTIME_WINDOW_HOURS = 24 * 30;
+
 // Fetch uptime for a monitor
-export const useUptime = (monitorId: number) => {
+export const useUptime = (monitorId: number, hours: number = UPTIME_WINDOW_HOURS) => {
   return useQuery({
-    queryKey: ['uptime', monitorId],
-    queryFn: async () => await monitorApi.getUptime(monitorId),
+    queryKey: ['uptime', monitorId, hours],
+    queryFn: async () => await monitorApi.getUptime(monitorId, hours),
     enabled: !!monitorId,
   });
 };
